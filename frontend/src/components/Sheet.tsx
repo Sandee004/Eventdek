@@ -22,31 +22,48 @@ export function DekSheet({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [open, onClose]);
 
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-          <motion.button
-            aria-label="Close"
-            className="absolute inset-0 bg-foreground/50 backdrop-blur-[2px]"
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              onClose();
+            }
+          }}
+        >
+          {/* Backdrop Overlay */}
+          <motion.div
+            aria-label="Close modal overlay"
+            className="absolute inset-0 cursor-pointer bg-foreground/50 backdrop-blur-[2px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
+            onWheel={() => onClose()}
           />
+          {/* Modal Container */}
           <motion.div
             role="dialog"
             aria-modal="true"
             aria-label={title}
-            className="relative flex max-h-[92dvh] w-full flex-col border border-border bg-card sm:max-w-lg sm:rounded-xl"
+            className="relative z-10 flex max-h-[92dvh] w-full flex-col border border-border bg-card sm:max-w-lg sm:rounded-xl"
             initial={{ y: "100%", opacity: 0.6, scale: 1 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "100%", opacity: 0.4 }}
             transition={{ type: "spring", stiffness: 420, damping: 38 }}
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-border sm:hidden" />
             <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-b border-border px-5 py-4">

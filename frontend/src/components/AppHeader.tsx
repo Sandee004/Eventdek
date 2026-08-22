@@ -1,9 +1,9 @@
 import { Link, NavLink } from "react-router-dom";
-import { Ticket, Layers } from "lucide-react";
+import { Ticket, Layers, LogOut } from "lucide-react";
 import { useEventDek } from "../../lib/store";
 
 export function AppHeader() {
-  const { rsvps, profile } = useEventDek();
+  const { rsvps, profile, logout } = useEventDek();
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
@@ -46,6 +46,15 @@ export function AppHeader() {
           >
             {(profile?.name ?? "G").slice(0, 1).toUpperCase()}
           </span>
+          {profile && (
+            <button
+              onClick={logout}
+              className="tactile grid size-9 shrink-0 place-items-center rounded-md border border-border bg-surface text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors"
+              title="Sign Out"
+            >
+              <LogOut className="size-4" />
+            </button>
+          )}
         </nav>
       </div>
     </header>

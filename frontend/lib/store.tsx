@@ -7,21 +7,24 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { CategoryId, Profile, Rsvp, StateId } from "./types";
+import type { CategoryId, Profile, Rsvp } from "./types";
+import { getProfileApi, logoutApi } from "./api";
 
 const KEY = "eventdek.v1";
 
 type Persisted = {
   profile: Profile | null;
+  token: string | null;
   passed: string[];
   rsvps: Rsvp[];
   savedAnswers: Record<string, string>;
-  stateId: StateId;
+  stateId: string;
   categories: CategoryId[];
 };
 
 const initial: Persisted = {
   profile: null,
+  token: null,
   passed: [],
   rsvps: [],
   savedAnswers: {},
@@ -32,7 +35,9 @@ const initial: Persisted = {
 type Store = Persisted & {
   hydrated: boolean;
   setProfile: (profile: Profile) => void;
-  setStateId: (stateId: StateId) => void;
+  login: (profile: Profile, token: string) => void;
+  logout: () => void;
+  setStateId: (stateId: string) => void;
   toggleCategory: (id: CategoryId) => void;
   clearCategories: () => void;
   pass: (eventId: string) => void;
@@ -52,7 +57,25 @@ export function EventDekProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) setState({ ...initial, ...(JSON.parse(raw) as Persisted) });
+      if (raw) {
+        const parsed = JSON.parse(raw) as Persisted;
+        setState({ ...initial, ...parsed });
+
+        // If stored token exists, attempt background sync of user profile
+        if (parsed.token) {
+          getProfileApi(parsed.token)
+            .then((syncedProfile) => {
+              setState((prev) => ({
+                ...prev,
+                profile: syncedProfile,
+                stateId: syncedProfile.stateId,
+              }));
+            })
+            .catch(() => {
+              // Token invalid or server down; clear token if unauthorized
+            });
+        }
+      }
     } catch {
       /* ignore corrupt storage */
     }
@@ -73,12 +96,31 @@ export function EventDekProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const logout = useCallback(() => {
+    if (state.token) {
+      logoutApi(state.token).catch(() => {});
+    }
+    patch((p) => ({
+      ...p,
+      profile: null,
+      token: null,
+    }));
+  }, [state.token, patch]);
+
   const value = useMemo<Store>(
     () => ({
       ...state,
       hydrated,
       setProfile: (profile) =>
         patch((p) => ({ ...p, profile, stateId: profile.stateId })),
+      login: (profile, token) =>
+        patch((p) => ({
+          ...p,
+          profile,
+          token,
+          stateId: profile.stateId,
+        })),
+      logout,
       setStateId: (stateId) => patch((p) => ({ ...p, stateId })),
       toggleCategory: (id) =>
         patch((p) => ({
@@ -117,7 +159,7 @@ export function EventDekProvider({ children }: { children: ReactNode }) {
         })),
       resetPasses: () => patch((p) => ({ ...p, passed: [] })),
     }),
-    [state, hydrated, patch],
+    [state, hydrated, patch, logout],
   );
 
   return (

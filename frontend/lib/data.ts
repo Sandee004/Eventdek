@@ -1,4 +1,4 @@
-import type { CategoryId, EventItem, StateId } from "./types";
+import type { CategoryId, EventItem } from "./types";
 import techSummit from "../src/assets/event-tech-summit.jpg";
 import hackathon from "../src/assets/event-hackathon.jpg";
 import designJam from "../src/assets/event-design-jam.jpg";
@@ -6,7 +6,7 @@ import rooftop from "../src/assets/event-rooftop-mixer.jpg";
 import concert from "../src/assets/event-concert.jpg";
 import virtual from "../src/assets/event-virtual.jpg";
 
-export const NG_STATES: { id: StateId; name: string; short: string }[] = [
+export const NG_STATES: { id: string; name: string; short: string }[] = [
   { id: "lagos", name: "Lagos", short: "LOS" },
   { id: "abuja", name: "Abuja FCT", short: "ABV" },
   { id: "rivers", name: "Rivers", short: "PHC" },
@@ -23,7 +23,7 @@ export const CATEGORIES: { id: CategoryId; name: string }[] = [
   { id: "lifestyle", name: "Lifestyle & Social" },
 ];
 
-export const stateName = (id: StateId) =>
+export const stateName = (id: string) =>
   NG_STATES.find((s) => s.id === id)?.name ?? "Nigeria";
 
 export const categoryName = (id: CategoryId) =>
@@ -31,7 +31,7 @@ export const categoryName = (id: CategoryId) =>
 
 export function filterDeck(
   events: EventItem[],
-  opts: { stateId: StateId; categories: CategoryId[]; seen: string[] },
+  opts: { stateId: string; categories: CategoryId[]; seen: string[] },
 ) {
   const seen = new Set(opts.seen);
   return events

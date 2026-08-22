@@ -2,10 +2,11 @@ from imports import FastAPI, CORSMiddleware, os, StaticFiles, FileResponse, load
 from core.database import engine, AsyncSession, Base
 from config import build_frontend, DIST_DIR
 from contextlib import asynccontextmanager
+import models
+from routers import auth
 
 
 build_frontend()
-#models.Base.metadata.create_all(bind=engine)
 load_dotenv()
 
 @asynccontextmanager
@@ -21,8 +22,8 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    title="Scholarship Aide API Engine",
-    description="Custom, self-hosted FastAPI server supporting context-isolated AI pipelines.",
+    title="EventDek API Engine",
+    description="Custom FastAPI server supporting auth and event discovery.",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -38,7 +39,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# app.include_router(auth.router)
+app.include_router(auth.router)
+
 # app.include_router(targets.router)
 
 

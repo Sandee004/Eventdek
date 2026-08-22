@@ -1,14 +1,5 @@
 export type CategoryId = "tech" | "hackathon" | "product" | "lifestyle";
 
-export type StateId =
-  | "lagos"
-  | "abuja"
-  | "rivers"
-  | "oyo"
-  | "kano"
-  | "enugu"
-  | "virtual";
-
 export type ExtraQuestion = {
   id: string;
   label: string;
@@ -33,7 +24,7 @@ export type EventItem = {
   image: string;
   start: string;
   endTime: string;
-  stateId: StateId;
+  stateId: string;
   area: string;
   venue: string;
   category: CategoryId;
@@ -50,22 +41,24 @@ export type EventItem = {
   questions?: ExtraQuestion[];
 };
 
-export type Profile = {
+export interface Profile {
+  id: string;
   name: string;
   email: string;
   phone: string;
-  stateId: StateId;
-  role: string;
-  handle: string;
+  stateId: string;
+  cityArea?: string;
+  role?: string;
+  handle?: string;
   calendarSync: boolean;
-};
+}
 
 export type Rsvp = {
   eventId: string;
   createdAt: number;
-  tierId?: string | undefined;
+  tierId?: string;
   amount: number;
-  method?: string | undefined;
-  answers?: Record<string, string> | undefined;
+  method?: string;
+  answers?: Record<string, string>;
   reference: string;
 };

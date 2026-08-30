@@ -1,25 +1,49 @@
 from imports import FastAPI, CORSMiddleware, os, StaticFiles, FileResponse, load_dotenv
-from core.database import engine, AsyncSession, Base
+from database import engine, AsyncSession, Base
 from config import build_frontend, DIST_DIR
 from contextlib import asynccontextmanager
 import models
-from routers import auth
+from routers import auth, events
 
 
 build_frontend()
 load_dotenv()
 
+scheduler = AsyncIOScheduler()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Handles application lifecycle events. Executes table creation queries 
-    safely using the async connection pool before the server begins listening.
+    Handles startup and shutdown lifecycle:
+    1. Runs database schema migrations/table creation.
+    2. Registers and starts the background aggregator scheduler.
+    3. Runs an immediate ingestion cycle on boot.
+    4. Shuts down background workers on exit.
     """
-    # Create tables asynchronously if they don't exist
+    # 1. Ensure database tables exist
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
+    # 2. Schedule recurring event aggregation job (every 6 hours)
+    scheduler.add_job(
+        run_event_aggregator_job,
+        trigger="interval",
+        hours=6,
+        id="event_aggregation_worker",
+        replace_existing=True,
+    )
+    scheduler.start()
+
+    # 3. Queue an initial immediate ingestion run
+    scheduler.add_job(run_event_aggregator_job, "date")
+
     yield
+
+    # 4. Clean shutdown
+    if scheduler.running:
+        scheduler.shutdown(wait=False)
+
 
 app = FastAPI(
     title="EventDek API Engine",
@@ -40,6 +64,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(events.router)
 
 # app.include_router(targets.router)
 

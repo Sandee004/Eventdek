@@ -9,7 +9,6 @@ from routers import auth, events
 build_frontend()
 load_dotenv()
 
-scheduler = AsyncIOScheduler()
 
 
 @asynccontextmanager
@@ -25,31 +24,19 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    # 2. Schedule recurring event aggregation job (every 6 hours)
-    scheduler.add_job(
-        run_event_aggregator_job,
-        trigger="interval",
-        hours=6,
-        id="event_aggregation_worker",
-        replace_existing=True,
-    )
-    scheduler.start()
-
-    # 3. Queue an initial immediate ingestion run
-    scheduler.add_job(run_event_aggregator_job, "date")
-
     yield
 
-    # 4. Clean shutdown
-    if scheduler.running:
-        scheduler.shutdown(wait=False)
 
 
 app = FastAPI(
     title="EventDek API Engine",
-    description="Custom FastAPI server supporting auth and event discovery.",
+    description="Backend API for EventDek: 1-swipe RSVP event discovery deck across Nigerian hubs.",
     version="1.0.0",
-    lifespan=lifespan
+    docs_url="/docs",      # Swagger UI URL
+    redoc_url="/redoc",    # ReDoc UI URL
+    openapi_url="/openapi.json",
+    lifespan=lifespan,
+    swagger_ui_parameters={"persistAuthorization": True},
 )
 
 app.add_middleware(

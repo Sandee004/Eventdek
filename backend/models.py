@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Column, String, Boolean, DateTime, Numeric, Text, ForeignKey
 from database import Base
 
+
 class User(Base):
     __tablename__ = "users"
 
@@ -15,8 +16,9 @@ class User(Base):
     city_area = Column(String, nullable=True)
     role = Column(String, nullable=True)
     handle = Column(String, nullable=True)
-    calendar_sync = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    calendar_sync = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
 
 class Event(Base):
     __tablename__ = "events"
@@ -34,7 +36,7 @@ class Event(Base):
     category = Column(String(50), default="tech")
     is_free = Column(Boolean, default=True)
     price_ngn = Column(Numeric(10, 2), default=0.0)
-    source_platform = Column(String(50), default="native")  # native, luma, tix, eventbrite
+    source_platform = Column(String(50), default="native")
     source_url = Column(String(500), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
@@ -46,5 +48,5 @@ class UserSwipe(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     event_id = Column(String, ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
-    direction = Column(String(10), nullable=False)  # "left" (pass) or "right" (rsvp)
+    direction = Column(String(10), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

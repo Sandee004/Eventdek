@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from uuid import UUID
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class UserBase(BaseModel):
@@ -9,10 +8,10 @@ class UserBase(BaseModel):
     email: EmailStr
     phone: str
     state_id: str
-    city_area: Optional[str]
+    city_area: Optional[str] = None
     role: Optional[str] = None
     handle: Optional[str] = None
-    calendar_sync: bool
+    calendar_sync: bool = False
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -30,20 +29,14 @@ class UserLogin(BaseModel):
 
 
 class UserProfile(UserBase):
-    id: UUID
-   
+    id: str
+    created_at: Optional[datetime] = None
+
 
 class AuthResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserProfile
-
-
-
-
-from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, ConfigDict
 
 
 class EventResponse(BaseModel):

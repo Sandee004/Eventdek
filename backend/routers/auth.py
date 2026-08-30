@@ -11,13 +11,13 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError, VerifyMismatchError
 import jwt
 
-from core.database import get_db
+from database import get_db
 from utils import hash_password, verify_password, create_access_token, get_current_user
 from models import User
 from schemas import AuthResponse, UserLogin, UserProfile, UserRegister
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-security = HTTPBearer(auto_error=False)
+security = HTTPBearer(scheme_name="JWTBearer", description="Enter your JWT access token (e.g. from /auth/login or /auth/register)", auto_error=False)
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 async def register(data: UserRegister, db: AsyncSession = Depends(get_db)):

@@ -11,7 +11,7 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError, VerifyMismatchError
 import jwt
 
-from core.database import get_db
+from database import get_db
 from models import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])

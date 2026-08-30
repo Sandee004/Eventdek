@@ -160,25 +160,34 @@
 import asyncio
 import logging
 import re
+import sys
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 from bs4 import BeautifulSoup, Tag
 from playwright.async_api import async_playwright
 from sqlalchemy.future import select
 
+# Ensure parent directory is in sys.path
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
 from database import AsyncSessionLocal
 from models import Event
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("eventdek.scraper")
 
 BASE_URL = "https://www.eventbrite.com/d/nigeria/all-events/"
-TOTAL_PAGES = 14
+TOTAL_PAGES = 5  # Start with 5 pages for testing
 
 
 def parse_raw_card(raw_html: str) -> Optional[dict]:
     soup = BeautifulSoup(raw_html, "html.parser")
 
+    # 1. Event Link
     link_tag = soup.find("a", href=re.compile(r"/e/"))
     if not isinstance(link_tag, Tag):
         return None
@@ -189,11 +198,13 @@ def parse_raw_card(raw_html: str) -> Optional[dict]:
     if href.startswith("/"):
         href = f"https://www.eventbrite.com{href}"
 
+    # 2. Title
     title_tag = soup.find(["h2", "h3", "h4", "strong"])
     title = title_tag.get_text(strip=True) if isinstance(title_tag, Tag) else link_tag.get_text(strip=True)
-    if not title:
+    if not title or len(title) < 3:
         return None
 
+    # 3. Metadata lines
     lines = [
         s.get_text(strip=True)
         for s in soup.find_all(["p", "span", "div"])
@@ -209,6 +220,7 @@ def parse_raw_card(raw_html: str) -> Optional[dict]:
     price_match = re.search(r"[\d,]+", price_str)
     price_ngn = float(price_match.group(0).replace(",", "")) if price_match else 0.0
 
+    # 4. Image URL
     img_tag = soup.find("img")
     img_url = "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800"
     if isinstance(img_tag, Tag):
@@ -216,6 +228,7 @@ def parse_raw_card(raw_html: str) -> Optional[dict]:
         if isinstance(raw_src, str) and raw_src.startswith("http"):
             img_url = raw_src
 
+    # Location normalization
     venue_lower = venue.lower()
     state_id = "lagos"
     if "abuja" in venue_lower:
@@ -232,7 +245,7 @@ def parse_raw_card(raw_html: str) -> Optional[dict]:
 
     return {
         "title": title,
-        "description": f"{title} happening live at {venue}. Date: {date_str}.",
+        "description": f"{title} happening live at {venue}. Date info: {date_str}.",
         "banner_url": img_url,
         "venue_name": venue,
         "address": venue,
@@ -248,8 +261,11 @@ def parse_raw_card(raw_html: str) -> Optional[dict]:
     }
 
 
-async def run_event_aggregator_job():
-    """Headless scraper writing directly to DB using AsyncSessionLocal."""
+async def run_event_scraper_job():
+    print("\n" + "=" * 60)
+    print("🚀 [START] Running Eventbrite Scraper Pipeline...")
+    print("=" * 60)
+
     total_saved = 0
     seen_links = set()
 
@@ -257,62 +273,96 @@ async def run_event_aggregator_job():
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
             viewport={"width": 1280, "height": 800},
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         )
         page = await context.new_page()
 
         for page_num in range(1, TOTAL_PAGES + 1):
             page_url = f"{BASE_URL}?page={page_num}"
+            print(f"\n📄 Loading Page {page_num}/{TOTAL_PAGES}: {page_url}")
+
             try:
                 await page.goto(page_url, wait_until="domcontentloaded", timeout=45000)
             except Exception as e:
-                logger.error(f"Failed page {page_num}: {e}")
+                print(f"❌ Failed to load page {page_num}: {e}")
                 continue
 
-            await page.wait_for_timeout(2000)
+            await page.wait_for_timeout(2500)
 
+            # Accept cookies
             if page_num == 1:
                 try:
                     cookie_btn = page.locator("#onetrust-accept-btn-handler, button:has-text('Accept')").first
                     if await cookie_btn.is_visible(timeout=3000):
                         await cookie_btn.click()
+                        print("🍪 Dismissed cookie banner.")
                 except Exception:
                     pass
 
-            for _ in range(2):
-                await page.evaluate("window.scrollBy(0, 800)")
-                await page.wait_for_timeout(500)
+            # Scroll down to trigger image and card hydration
+            for _ in range(3):
+                await page.evaluate("window.scrollBy(0, 1000)")
+                await page.wait_for_timeout(600)
 
+            # Find card wrappers
             card_elements = await page.locator("article, section[class*='event-card'], div[data-testid*='card']").all()
+            print(f"🔍 Found {len(card_elements)} card elements on Page {page_num}")
+
+            page_saved = 0
 
             async with AsyncSessionLocal() as db:
-                for element in card_elements:
+                for idx, element in enumerate(card_elements, 1):
                     try:
                         raw_html = await element.inner_html()
                         parsed = parse_raw_card(raw_html)
 
-                        if parsed and parsed["source_url"] not in seen_links:
-                            seen_links.add(parsed["source_url"])
+                        if not parsed:
+                            continue
 
-                            existing = await db.execute(
-                                select(Event).where(
-                                    (Event.source_url == parsed["source_url"]) | (Event.title == parsed["title"])
-                                )
-                            )
-                            if existing.scalars().first():
-                                continue
+                        if parsed["source_url"] in seen_links:
+                            print(f"   ↳ [Skipped] Duplicate URL in memory: {parsed['title'][:40]}")
+                            continue
 
-                            new_event = Event(
-                                id=str(uuid.uuid4()),
-                                **parsed,
-                                is_active=True,
+                        seen_links.add(parsed["source_url"])
+
+                        # Check DB for duplicates
+                        existing = await db.execute(
+                            select(Event).where(
+                                (Event.source_url == parsed["source_url"]) | (Event.title == parsed["title"])
                             )
-                            db.add(new_event)
-                            total_saved += 1
-                    except Exception:
+                        )
+                        if existing.scalars().first():
+                            print(f"   ↳ [Skipped] Already exists in DB: {parsed['title'][:40]}")
+                            continue
+
+                        # Add new event
+                        new_event = Event(
+                            id=str(uuid.uuid4()),
+                            **parsed,
+                            is_active=True,
+                        )
+                        db.add(new_event)
+                        page_saved += 1
+                        total_saved += 1
+                        print(f"   ✅ [Queued to DB] {parsed['title'][:45]} | State: {parsed['state_id']}")
+
+                    except Exception as e:
+                        print(f"   ⚠️ Error parsing card #{idx}: {e}")
                         continue
 
-                await db.commit()
+                # Commit all records found on this page
+                if page_saved > 0:
+                    await db.commit()
+                    print(f"💾 [DB COMMIT SUCCESS] Committed {page_saved} new events from Page {page_num}.")
+                else:
+                    print(f"ℹ️ No new unique events to commit on Page {page_num}.")
 
         await browser.close()
-    logger.info(f"Aggregation complete. Ingested {total_saved} new events.")
+
+    print("\n" + "=" * 60)
+    print(f"🎉 [FINISHED] Ingested {total_saved} total unique events into the database.")
+    print("=" * 60 + "\n")
+
+
+if __name__ == "__main__":
+    asyncio.run(run_event_scraper_job())

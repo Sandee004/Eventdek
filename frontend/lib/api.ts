@@ -1,6 +1,7 @@
 import type { BackendEvent, CategoryId, EventItem, Profile } from "./types";
 
-const API_BASE_URL = "http://localhost:8000";
+// const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
 // Payload sent to backend endpoints (snake_case)
 export interface RegisterPayload {

@@ -192,7 +192,7 @@ def parse_raw_card(raw_html: str, extracted_price_text: str = "") -> Optional[di
 
 
 async def run_event_scraper_job():
-    print("\n🚀 [START] Ingesting Events with High-Fidelity Price Locators...")
+    print("\n [START] Ingesting Events...")
     total_saved = 0
     seen_links = set()
 
@@ -206,7 +206,7 @@ async def run_event_scraper_job():
 
         for page_num in range(1, TOTAL_PAGES + 1):
             page_url = f"{BASE_URL}?page={page_num}"
-            print(f"\n📄 Loading Page {page_num}/{TOTAL_PAGES}")
+            print(f"\n Loading Page {page_num}/{TOTAL_PAGES}")
 
             try:
                 await page.goto(page_url, wait_until="networkidle", timeout=60000)
@@ -273,11 +273,11 @@ async def run_event_scraper_job():
 
                 if page_saved > 0:
                     await db.commit()
-                    print(f"💾 Committed {page_saved} clean events from Page {page_num}.")
+                    print(f"Committed {page_saved} clean events from Page {page_num}.")
 
         await browser.close()
 
-    print(f"\n🎉 Finished! Ingested {total_saved} events with accurate prices into Supabase.")
+    print(f"\n Finished! Ingested {total_saved} events.")
 
 
 if __name__ == "__main__":

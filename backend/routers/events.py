@@ -28,7 +28,6 @@ async def get_deck(
     """
     Fetches the next batch of unswiped upcoming events for the user's state.
     """
-    # 1. Determine target state (case-insensitive)
     target_state = (state_id or current_user.state_id or "lagos").strip().lower()
     current_user_id_str = str(current_user.id)
 

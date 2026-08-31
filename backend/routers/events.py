@@ -2,13 +2,13 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from database import get_db
-from models import Event, User, UserSwipe
+from models import Event, Registration, User, UserSwipe
 from routers.auth import get_current_user
 from schemas import EventResponse, SwipePayload
 import uuid
@@ -79,18 +79,35 @@ async def get_deck(
     return events
 
 
-@router.post("/swipe")
+@router.post("/swipe", status_code=status.HTTP_200_OK)
 async def record_swipe(
     payload: SwipePayload,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Records a user's swipe (pass or rsvp) for an event.
+    Records a user's swipe (pass or rsvp).
+    Freezes an immutable Registration snapshot when swiping right on free events.
     """
+    direction_clean = payload.direction.lower().strip()
+    if direction_clean not in ("left", "right"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Direction must be 'left' or 'right'",
+        )
+
     current_user_id_str = str(current_user.id)
-    
-    # Check if a swipe already exists for this user and event
+
+    # 1. Fetch Event to validate existence and pull snapshot data
+    event_res = await db.execute(select(Event).where(Event.id == payload.event_id))
+    event = event_res.scalars().first()
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        )
+
+    # 2. Record or Update UserSwipe using setattr
     existing_query = select(UserSwipe).where(
         UserSwipe.user_id == current_user_id_str,
         UserSwipe.event_id == payload.event_id,
@@ -99,15 +116,48 @@ async def record_swipe(
     existing_swipe = res.scalars().first()
 
     if existing_swipe:
-        existing_swipe.direction = payload.direction
+        setattr(existing_swipe, "direction", direction_clean)
     else:
         new_swipe = UserSwipe(
             id=str(uuid.uuid4()),
             user_id=current_user_id_str,
             event_id=payload.event_id,
-            direction=payload.direction,
+            direction=direction_clean,
         )
         db.add(new_swipe)
 
+        is_free_event = bool(getattr(event, "is_free", True))
+
+        registration_created = False
+        if direction_clean == "right" and is_free_event:
+            existing_reg_res = await db.execute(
+                select(Registration).where(
+                    Registration.user_id == current_user_id_str,
+                    Registration.event_id == payload.event_id,
+                )
+            )
+            if not existing_reg_res.scalars().first():
+                new_reg = Registration(
+                    id=str(uuid.uuid4()),
+                    user_id=current_user_id_str,
+                    event_id=event.id,
+                    event_title=event.title,
+                    event_banner_url=event.banner_url,
+                    event_venue_name=event.venue_name,
+                    event_start_time=event.start_time,
+                    event_end_time=event.end_time,
+                    event_source_url=event.source_url,
+                    qr_code_token=str(uuid.uuid4()),
+                    registration_status="confirmed",
+                )
+                db.add(new_reg)
+                registration_created = True
+                
     await db.commit()
-    return {"status": "ok", "event_id": payload.event_id, "direction": payload.direction}
+
+    return {
+        "status": "ok",
+        "event_id": payload.event_id,
+        "direction": direction_clean,
+        "registered": registration_created,
+    }

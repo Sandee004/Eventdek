@@ -14,6 +14,7 @@ import {
   Undo2,
   X,
   Check,
+  Loader2,
 } from "lucide-react";
 import { EventCard } from "./EventCard";
 import { DetailsSheet } from "./DetailsSheet";
@@ -36,6 +37,8 @@ export function Deck() {
     rsvps,
     cancelRsvp,
     resetPasses,
+    dbEvents,
+    isLoadingEvents,
   } = useEventDek();
 
   const [lastAction, setLastAction] = useState<{
@@ -45,14 +48,18 @@ export function Deck() {
   const [details, setDetails] = useState<EventItem | null>(null);
   const [checkout, setCheckout] = useState<EventItem | null>(null);
 
+  const pool = useMemo(() => {
+    return dbEvents.length > 0 ? dbEvents : EVENTS;
+  }, [dbEvents]);
+
   const deck = useMemo(
     () =>
-      filterDeck(EVENTS, {
+      filterDeck(pool, {
         stateId,
         categories,
         seen: [...passed, ...rsvps.map((r) => r.eventId)],
       }),
-    [passed, rsvps, stateId, categories],
+    [pool, passed, rsvps, stateId, categories],
   );
 
   const top = deck[0];
@@ -134,7 +141,16 @@ export function Deck() {
   return (
     <div className="mx-auto w-full max-w-md px-4 pb-10 pt-5">
       <div className="relative h-[540px] sm:h-[580px]">
-        {!top && (
+        {isLoadingEvents && !top && (
+          <div className="card-frame flex h-full flex-col items-center justify-center gap-3 rounded-xl px-6 text-center">
+            <Loader2 className="size-8 animate-spin text-going" />
+            <p className="text-sm font-medium text-muted-foreground">
+              Fetching events from database…
+            </p>
+          </div>
+        )}
+
+        {!isLoadingEvents && !top && (
           <EmptyState
             onNationwide={() => setStateId("virtual")}
             onReset={() => {

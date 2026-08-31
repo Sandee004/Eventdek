@@ -10,7 +10,8 @@ from sqlalchemy.future import select
 from database import get_db
 from models import Event, User, UserSwipe
 from routers.auth import get_current_user
-from schemas import EventResponse
+from schemas import EventResponse, SwipePayload
+import uuid
 
 logger = logging.getLogger("eventdek.deck")
 router = APIRouter(prefix="/events", tags=["events"])
@@ -77,3 +78,37 @@ async def get_deck(
         events = fallback_res.scalars().all()
 
     return events
+
+
+@router.post("/swipe")
+async def record_swipe(
+    payload: SwipePayload,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Records a user's swipe (pass or rsvp) for an event.
+    """
+    current_user_id_str = str(current_user.id)
+    
+    # Check if a swipe already exists for this user and event
+    existing_query = select(UserSwipe).where(
+        UserSwipe.user_id == current_user_id_str,
+        UserSwipe.event_id == payload.event_id,
+    )
+    res = await db.execute(existing_query)
+    existing_swipe = res.scalars().first()
+
+    if existing_swipe:
+        existing_swipe.direction = payload.direction
+    else:
+        new_swipe = UserSwipe(
+            id=str(uuid.uuid4()),
+            user_id=current_user_id_str,
+            event_id=payload.event_id,
+            direction=payload.direction,
+        )
+        db.add(new_swipe)
+
+    await db.commit()
+    return {"status": "ok", "event_id": payload.event_id, "direction": payload.direction}

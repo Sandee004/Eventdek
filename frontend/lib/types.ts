@@ -41,6 +41,24 @@ export type EventItem = {
   questions?: ExtraQuestion[];
 };
 
+export interface BackendEvent {
+  id: string;
+  title: string;
+  description: string;
+  banner_url?: string | null;
+  venue_name: string;
+  address?: string | null;
+  state_id: string;
+  city_area?: string | null;
+  start_time: string;
+  end_time: string;
+  category: string;
+  is_free: boolean;
+  price_ngn: number;
+  source_platform: string;
+  source_url?: string | null;
+}
+
 export interface Profile {
   id: string;
   name: string;

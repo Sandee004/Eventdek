@@ -20,7 +20,7 @@ import { downloadIcs, googleCalendarUrl, mapsUrl } from "../../lib/calender";
 import { useEventDek } from "../../lib/store";
 
 export function MyDekPage() {
-  const { rsvps, cancelRsvp, hydrated } = useEventDek();
+  const { rsvps, cancelRsvp, hydrated, allEventsMap } = useEventDek();
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
 
   const passes = useMemo(
@@ -28,7 +28,7 @@ export function MyDekPage() {
       rsvps
         .map((r) => ({
           rsvp: r,
-          event: EVENTS.find((e) => e.id === r.eventId)!,
+          event: allEventsMap[r.eventId] || EVENTS.find((e) => e.id === r.eventId)!,
         }))
         .filter((p) => p.event)
         .filter((p) =>
@@ -37,7 +37,7 @@ export function MyDekPage() {
             : new Date(p.event.start).getTime() < Date.now(),
         )
         .sort((a, b) => +new Date(a.event.start) - +new Date(b.event.start)),
-    [rsvps, tab],
+    [rsvps, tab, allEventsMap],
   );
 
   return (

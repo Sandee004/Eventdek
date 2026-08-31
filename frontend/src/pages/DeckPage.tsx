@@ -11,19 +11,23 @@ import { EVENTS, filterDeck } from "../../lib/data";
 import { useEventDek } from "../../lib/store";
 
 export function DeckPage() {
-  const { profile, hydrated, stateId, categories, passed, rsvps } =
+  const { profile, hydrated, stateId, categories, passed, rsvps, dbEvents } =
     useEventDek();
   const [authView, setAuthView] = useState<"landing" | "onboarding" | "login">("landing");
+
+  const pool = useMemo(() => {
+    return dbEvents.length > 0 ? dbEvents : EVENTS;
+  }, [dbEvents]);
 
   // Calculates remaining swipeable cards for the current state/category filters
   const remaining = useMemo(
     () =>
-      filterDeck(EVENTS, {
+      filterDeck(pool, {
         stateId,
         categories,
         seen: [...passed, ...rsvps.map((r) => r.eventId)],
       }).length,
-    [stateId, categories, passed, rsvps],
+    [pool, stateId, categories, passed, rsvps],
   );
 
   // Wait for local storage to load before rendering view states

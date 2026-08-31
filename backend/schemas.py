@@ -39,6 +39,7 @@ class AuthResponse(BaseModel):
     user: UserProfile
 
 
+
 class EventResponse(BaseModel):
     id: str
     title: str
@@ -47,17 +48,16 @@ class EventResponse(BaseModel):
     venue_name: str
     address: Optional[str] = None
     state_id: str
-    city_area: Optional[str] = None
     start_time: datetime
     end_time: datetime
     category: str
     is_free: bool
     price_ngn: float
+    currency: str = "NGN"
     source_platform: str
     source_url: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
-
 
 class SwipePayload(BaseModel):
     event_id: str

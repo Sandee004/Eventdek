@@ -5,7 +5,7 @@ import sys
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from bs4 import BeautifulSoup, Tag
 from dateutil import parser as date_parser
 from playwright.async_api import async_playwright
@@ -66,7 +66,6 @@ def parse_native_price(raw_text: str) -> Tuple[bool, float, str]:
     if lower == "free" or "$0" in lower or "₦0" in lower or "€0" in lower or "£0" in lower or "from $0.00" in lower:
         return True, 0.0, "NGN"
 
-    # Identify currency
     currency = "NGN"
     if "$" in raw_text or "usd" in lower:
         currency = "USD"
@@ -77,7 +76,6 @@ def parse_native_price(raw_text: str) -> Tuple[bool, float, str]:
     elif "₦" in raw_text or "ngn" in lower:
         currency = "NGN"
 
-    # Match numeric portion
     match = re.search(r"[\$₦€£]?\s*([\d,]+(?:\.\d{2})?)", raw_text)
     if not match:
         return True, 0.0, currency
@@ -94,7 +92,11 @@ def parse_native_price(raw_text: str) -> Tuple[bool, float, str]:
     return False, round(val, 2), currency
 
 
-def parse_raw_card(raw_html: str, extracted_price_text: str = "") -> Optional[dict]:
+def parse_raw_card(
+    raw_html: str, 
+    extracted_price_text: str = "",
+    custom_questions: Optional[List[Dict[str, Any]]] = None
+) -> Optional[dict]:
     soup = BeautifulSoup(raw_html, "html.parser")
 
     # 1. Event Link & Title
@@ -113,11 +115,10 @@ def parse_raw_card(raw_html: str, extracted_price_text: str = "") -> Optional[di
     if not title or len(title) < 3:
         return None
 
-    # 2. Extract Price String (Using Playwright DOM extraction first)
+    # 2. Extract Price String
     price_str = extracted_price_text.strip()
 
     if not price_str:
-        # Fallback: scan all text nodes for price indicators
         for tag in soup.find_all(["p", "span", "div"]):
             text = tag.get_text(strip=True)
             if any(sym in text for sym in ["$", "₦", "€", "£"]) and not any(d in text.lower() for d in ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]):
@@ -173,6 +174,9 @@ def parse_raw_card(raw_html: str, extracted_price_text: str = "") -> Optional[di
     state_id = resolve_state_id(full_loc)
     category = "tech" if any(k in title.lower() for k in ["tech", "ai", "dev", "data", "code", "design", "product"]) else "lifestyle"
 
+    questions = custom_questions or []
+    requires_custom = len(questions) > 0
+
     return {
         "title": title,
         "description": f"{title} live at {venue_str}. Date: {date_str or 'Upcoming'}.",
@@ -188,6 +192,8 @@ def parse_raw_card(raw_html: str, extracted_price_text: str = "") -> Optional[di
         "currency": currency,
         "source_platform": "eventbrite",
         "source_url": href,
+        "requires_custom_fields": requires_custom,
+        "custom_fields_schema": questions,
     }
 
 
@@ -233,10 +239,12 @@ async def run_event_scraper_job():
             async with AsyncSessionLocal() as db:
                 for element in card_elements:
                     try:
-                        # 1. Extract direct price text from DOM first
+                        # 1. Extract direct price text
                         price_text = ""
                         try:
-                            price_locator = element.locator("[class*='priceWrapper'], p:has-text('$'), p:has-text('₦'), p:has-text('€'), p:has-text('From')").first
+                            price_locator = element.locator(
+                                "[class*='priceWrapper'], p:has-text('$'), p:has-text('₦'), p:has-text('€'), p:has-text('From')"
+                            ).first
                             if await price_locator.count() > 0:
                                 price_text = await price_locator.inner_text()
                         except Exception:
@@ -266,7 +274,11 @@ async def run_event_scraper_job():
                         db.add(new_event)
                         page_saved += 1
                         total_saved += 1
-                        print(f"   ✅ [Saved] {parsed['title'][:26]} | Free: {parsed['is_free']} | Price: {parsed['currency']} {parsed['price_ngn']}")
+                        print(
+                            f"   ✅ [Saved] {parsed['title'][:26]} | "
+                            f"Free: {parsed['is_free']} | Price: {parsed['currency']} {parsed['price_ngn']} | "
+                            f"Custom Questions: {parsed['requires_custom_fields']}"
+                        )
 
                     except Exception:
                         continue

@@ -1,6 +1,16 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from database import Base
 
 
@@ -39,6 +49,8 @@ class Event(Base):
     source_platform = Column(String(50), default="native")
     source_url = Column(String(500), nullable=True)
     is_active = Column(Boolean, default=True)
+    requires_custom_fields = Column(Boolean, default=False)
+    custom_fields_schema = Column(JSON, default=list)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
@@ -61,14 +73,25 @@ class Registration(Base):
     user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     event_id = Column(String, ForeignKey("events.id", ondelete="SET NULL"), nullable=True, index=True)
 
-    # Snapshot fields (Immutable attendance receipt)
-    event_title = Column(String(255), nullable=False)
-    event_banner_url = Column(String(500), nullable=True)
-    event_venue_name = Column(String(255), nullable=False)
-    event_start_time = Column(DateTime(timezone=True), nullable=False)
-    event_end_time = Column(DateTime(timezone=True), nullable=False)
-    event_source_url = Column(String(500), nullable=True)
+    # Ticket & Payment Snapshot
+    ticket_tier = Column(String(50), default="free")
+    amount_paid = Column(Numeric(10, 2), default=0.0)
+    currency = Column(String(10), default="NGN")
+    payment_reference = Column(String(100), nullable=True)
 
+    # Pass & Check-in Details
     qr_code_token = Column(String(255), unique=True, nullable=False)
+    checked_in = Column(Boolean, default=False)
+    checked_in_at = Column(DateTime(timezone=True), nullable=True)
     registration_status = Column(String(50), default="confirmed")
+
+    # Event Snapshot Fields (Frozen Receipt Data)
+    event_title = Column(String(255), nullable=True)
+    event_banner_url = Column(Text, nullable=True)
+    event_venue_name = Column(String(255), nullable=True)
+    event_start_time = Column(DateTime(timezone=True), nullable=True)
+    event_end_time = Column(DateTime(timezone=True), nullable=True)
+    event_source_url = Column(Text, nullable=True)
+    custom_answers = Column(JSON, default=dict)
+
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

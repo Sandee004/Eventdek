@@ -20,6 +20,7 @@ import DetailsSheet from "./DetailsSheet";
 import RsvpFlow from "./RsvpFlow";
 import { API_BASE_URL, NG_STATES } from "../lib/constants";
 import { AppHeader } from "./AppHeader";
+import { AmbientBackground } from "./AmbientBg";
 
 const SWIPE_THRESHOLD = 110;
 
@@ -191,6 +192,7 @@ export default function Home() {
             {fetchError}
           </div>
         )}
+        <AmbientBackground />
 
         <div className="relative aspect-[16/23] w-full max-w-sm sm:max-w-md">
           {!top && !isLoadingEvents && (

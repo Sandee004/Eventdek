@@ -1,27 +1,22 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
-  CheckCircle2,
-  Sparkles,
   CalendarCheck2,
-  MapPin,
-  Ticket,
-  EyeOff,
+  CheckCircle2,
   Eye,
+  EyeOff,
   Loader2,
+  MapPin,
+  Sparkles,
+  Ticket,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { NG_STATES } from "../../lib/data";
-import { useEventDek } from "../../lib/store";
-import { registerApi } from "../../lib/api";
+import { API_BASE_URL, NG_STATES } from "../lib/constants";
 
-interface OnboardingProps {
-  onSwitchToLogin?: () => void;
-}
-
-export function Onboarding({ onSwitchToLogin }: OnboardingProps = {}) {
-  const { login } = useEventDek();
+export default function Onboarding() {
+  const navigate = useNavigate();
   const [step, setStep] = useState<1 | 2>(1);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -32,47 +27,83 @@ export function Onboarding({ onSwitchToLogin }: OnboardingProps = {}) {
     email: "",
     password: "",
     phone: "",
-    stateId: "lagos",
-    cityArea: "",
+    state_id: "lagos",
     role: "",
     handle: "",
-    calendarSync: false,
+    calendar_sync: false,
   });
-
-  const nameParts = form.name.trim().split(/\s+/).filter(Boolean);
-  const isStep1Valid =
-    nameParts.length >= 2 &&
-    nameParts.every((part) => part.length >= 2) &&
-    /.+@.+\..+/.test(form.email) &&
-    form.password.length >= 8 &&
-    form.phone.trim().length === 11;
-
-  const isStep2Valid = Boolean(form.stateId.trim());
 
   const fieldStyle =
     "mt-1.5 w-full rounded-lg border border-input bg-surface px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground transition-all focus:border-ring focus:ring-1 focus:ring-ring";
 
+  // Step 1 Validation & Error Feedback
+  const handleNextStep = () => {
+    const nameParts = form.name.trim().split(/\s+/).filter(Boolean);
+
+    if (nameParts.length < 2 || !nameParts.every((part) => part.length >= 2)) {
+      setError(
+        "Please enter both your first and last name (at least 2 characters each).",
+      );
+      return;
+    }
+    if (!/.+@.+\..+/.test(form.email.trim())) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    if (form.password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+    if (form.phone.trim().length !== 11) {
+      setError(
+        "Please enter a valid 11-digit phone number (e.g. 08012345678).",
+      );
+      return;
+    }
+
+    setError(null);
+    setStep(2);
+  };
+
+  // Step 2 Submission & Validation
   const handleComplete = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isStep1Valid || !isStep2Valid || loading) return;
+    if (loading) return;
+
+    if (!form.state_id.trim()) {
+      setError("Please select your primary state.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      const res = await registerApi({
-        name: form.name,
-        email: form.email,
-        password: form.password,
-        phone: form.phone,
-        state_id: form.stateId,
-        city_area: form.cityArea,
-        role: form.role,
-        handle: form.handle,
-        calendar_sync: form.calendarSync,
+      const res = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          email: form.email.trim(),
+          password: form.password,
+          phone: form.phone.trim(),
+          state_id: form.state_id,
+          role: form.role.trim() || null,
+          handle: form.handle.trim() || null,
+          calendar_sync: form.calendar_sync,
+        }),
       });
 
-      login(res.user, res.access_token);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.detail || "Failed to create account.");
+      }
+
+      localStorage.setItem("eventdek_token", data.access_token);
+      localStorage.setItem("eventdek_user", JSON.stringify(data.user));
+
+      navigate("/homepage");
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -160,7 +191,7 @@ export function Onboarding({ onSwitchToLogin }: OnboardingProps = {}) {
         </div>
 
         {error && (
-          <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive">
+          <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs font-medium text-destructive">
             {error}
           </div>
         )}
@@ -187,10 +218,12 @@ export function Onboarding({ onSwitchToLogin }: OnboardingProps = {}) {
                   </div>
                   <input
                     type="text"
-                    required
                     className={fieldStyle}
                     value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    onChange={(e) => {
+                      setError(null);
+                      setForm({ ...form, name: e.target.value });
+                    }}
                     placeholder="e.g. Chidera Okonkwo"
                   />
                 </label>
@@ -201,12 +234,12 @@ export function Onboarding({ onSwitchToLogin }: OnboardingProps = {}) {
                   </span>
                   <input
                     type="email"
-                    required
                     className={fieldStyle}
                     value={form.email}
-                    onChange={(e) =>
-                      setForm({ ...form, email: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setError(null);
+                      setForm({ ...form, email: e.target.value });
+                    }}
                     placeholder="you@domain.com"
                   />
                 </label>
@@ -223,12 +256,12 @@ export function Onboarding({ onSwitchToLogin }: OnboardingProps = {}) {
                   <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
-                      required
                       className={`${fieldStyle} pr-10`}
                       value={form.password}
-                      onChange={(e) =>
-                        setForm({ ...form, password: e.target.value })
-                      }
+                      onChange={(e) => {
+                        setError(null);
+                        setForm({ ...form, password: e.target.value });
+                      }}
                       placeholder="••••••••••••"
                     />
                     <button
@@ -256,37 +289,34 @@ export function Onboarding({ onSwitchToLogin }: OnboardingProps = {}) {
                   <input
                     type="tel"
                     inputMode="tel"
-                    required
                     className={fieldStyle}
                     value={form.phone}
-                    onChange={(e) =>
-                      setForm({ ...form, phone: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setError(null);
+                      setForm({ ...form, phone: e.target.value });
+                    }}
                     placeholder="08012345678"
                   />
                 </label>
 
                 <button
                   type="button"
-                  disabled={!isStep1Valid}
-                  onClick={() => setStep(2)}
-                  className="tactile mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-going py-3 text-sm font-bold text-going-foreground shadow-lg disabled:cursor-not-allowed disabled:opacity-40"
+                  onClick={handleNextStep}
+                  className="tactile mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-going py-3 text-sm font-bold text-going-foreground shadow-lg hover:opacity-90 active:scale-[0.99] transition-all"
                 >
                   Continue <ArrowRight className="size-4" />
                 </button>
 
-                {onSwitchToLogin && (
-                  <div className="mt-4 text-center text-xs text-muted-foreground pt-2 border-t border-border">
-                    Already have an account?{" "}
-                    <button
-                      type="button"
-                      onClick={onSwitchToLogin}
-                      className="font-bold text-going hover:underline"
-                    >
-                      Sign In
-                    </button>
-                  </div>
-                )}
+                <div className="mt-4 text-center text-xs text-muted-foreground pt-2 border-t border-border">
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => navigate("/login")}
+                    className="font-bold text-going hover:underline"
+                  >
+                    Sign In
+                  </button>
+                </div>
               </motion.div>
             ) : (
               <motion.div
@@ -297,41 +327,25 @@ export function Onboarding({ onSwitchToLogin }: OnboardingProps = {}) {
                 transition={{ duration: 0.2 }}
                 className="space-y-4"
               >
-                <div className="grid gap-3.5 sm:grid-cols-2 sm:items-start">
-                  <label className="flex flex-col justify-between">
-                    <span className="label-caps text-muted-foreground flex h-5 items-center gap-1">
-                      <MapPin className="size-3 text-going" /> Primary State *
-                    </span>
-                    <select
-                      className={`${fieldStyle} h-10`}
-                      value={form.stateId}
-                      onChange={(e) =>
-                        setForm({ ...form, stateId: e.target.value })
-                      }
-                    >
-                      {NG_STATES.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="flex flex-col justify-between">
-                    <span className="label-caps text-muted-foreground flex h-5 items-center">
-                      Area / City
-                    </span>
-                    <input
-                      type="text"
-                      className={`${fieldStyle} h-10`}
-                      value={form.cityArea}
-                      onChange={(e) =>
-                        setForm({ ...form, cityArea: e.target.value })
-                      }
-                      placeholder="e.g. Yaba, Ikeja, Wuse 2"
-                    />
-                  </label>
-                </div>
+                <label className="block">
+                  <span className="label-caps text-muted-foreground flex items-center gap-1">
+                    <MapPin className="size-3 text-going" /> Primary State *
+                  </span>
+                  <select
+                    className={`${fieldStyle} h-10`}
+                    value={form.state_id}
+                    onChange={(e) => {
+                      setError(null);
+                      setForm({ ...form, state_id: e.target.value });
+                    }}
+                  >
+                    {NG_STATES.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
                 <div className="grid gap-3.5 sm:grid-cols-2">
                   <label className="block">
@@ -368,7 +382,7 @@ export function Onboarding({ onSwitchToLogin }: OnboardingProps = {}) {
                 <button
                   type="button"
                   onClick={() =>
-                    setForm({ ...form, calendarSync: !form.calendarSync })
+                    setForm({ ...form, calendar_sync: !form.calendar_sync })
                   }
                   className="mt-2 grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-border bg-surface-2/60 p-3.5 text-left transition-colors hover:border-border/90"
                 >
@@ -387,14 +401,14 @@ export function Onboarding({ onSwitchToLogin }: OnboardingProps = {}) {
 
                   <span
                     className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${
-                      form.calendarSync
+                      form.calendar_sync
                         ? "bg-going border-going"
                         : "bg-surface-2 border-muted-foreground/40"
                     }`}
                   >
                     <span
                       className={`absolute top-0.5 size-4.5 rounded-full transition-all shadow-sm ${
-                        form.calendarSync
+                        form.calendar_sync
                           ? "left-[1.35rem] bg-going-foreground"
                           : "left-0.5 bg-muted-foreground"
                       }`}
@@ -405,7 +419,10 @@ export function Onboarding({ onSwitchToLogin }: OnboardingProps = {}) {
                 <div className="mt-6 flex items-center gap-3 pt-1">
                   <button
                     type="button"
-                    onClick={() => setStep(1)}
+                    onClick={() => {
+                      setError(null);
+                      setStep(1);
+                    }}
                     className="tactile flex items-center justify-center gap-1.5 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm font-semibold text-foreground hover:bg-surface"
                   >
                     <ArrowLeft className="size-4" /> Back
@@ -413,8 +430,8 @@ export function Onboarding({ onSwitchToLogin }: OnboardingProps = {}) {
 
                   <button
                     type="submit"
-                    disabled={!isStep2Valid || loading}
-                    className="tactile flex flex-1 items-center justify-center gap-2 rounded-xl bg-going py-3 text-sm font-bold text-going-foreground shadow-lg disabled:cursor-not-allowed disabled:opacity-40"
+                    disabled={loading}
+                    className="tactile flex flex-1 items-center justify-center gap-2 rounded-xl bg-going py-3 text-sm font-bold text-going-foreground shadow-lg hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-50"
                   >
                     {loading ? (
                       <>

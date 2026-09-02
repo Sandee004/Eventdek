@@ -272,3 +272,46 @@ async def record_swipe(
 #         "registered": registration_created,
 #     }
 
+@router.get("/my-dek", status_code=status.HTTP_200_OK)
+async def get_my_dek(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Fetches all confirmed event passes registered by the authenticated user.
+    """
+    current_user_id_str = str(current_user.id)
+
+    query = (
+        select(Registration)
+        .where(Registration.user_id == current_user_id_str)
+        .order_by(Registration.event_start_time.asc())
+    )
+
+    result = await db.execute(query)
+    registrations = result.scalars().all()
+
+    passes = []
+    for reg in registrations:
+        qr_token = str(getattr(reg, "qr_code_token", "") or "")
+        start_time = getattr(reg, "event_start_time", None)
+        end_time = getattr(reg, "event_end_time", None)
+        created = getattr(reg, "created_at", None)
+
+        passes.append({
+            "id": str(getattr(reg, "id", "")),
+            "event_id": str(getattr(reg, "event_id", "")),
+            "event_title": getattr(reg, "event_title", None),
+            "event_banner_url": getattr(reg, "event_banner_url", None),
+            "event_venue_name": getattr(reg, "event_venue_name", None),
+            "event_address": getattr(reg, "event_venue_name", None),
+            "event_start_time": start_time.isoformat() if start_time else None,
+            "event_end_time": end_time.isoformat() if end_time else None,
+            "event_source_url": getattr(reg, "event_source_url", None),
+            "qr_code_token": qr_token,
+            "reference": qr_token[:8].upper() if qr_token else "DEK-PASS",
+            "registration_status": getattr(reg, "registration_status", "confirmed"),
+            "created_at": created.isoformat() if created else None,
+        })
+
+    return passes

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   Calendar,
@@ -11,12 +12,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-interface LandingPageProps {
-  onStartOnboarding: () => void;
-  onStartLogin?: () => void;
-}
-
-export function LandingPage({ onStartOnboarding, onStartLogin }: LandingPageProps) {
+export default function LandingPage() {
+  const navigate = useNavigate();
   const [mockSwipeDirection, setMockSwipeDirection] = useState<
     "left" | "right" | null
   >(null);
@@ -41,17 +38,17 @@ export function LandingPage({ onStartOnboarding, onStartLogin }: LandingPageProp
 
           <div className="flex items-center gap-3">
             <button
-              onClick={onStartLogin || onStartOnboarding}
+              onClick={() => navigate("/login")}
               className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
             >
               Sign In
             </button>
 
             <button
-              onClick={onStartOnboarding}
+              onClick={() => navigate("/register")}
               className="tactile flex items-center gap-2 rounded-lg bg-going px-4 py-2 text-xs font-bold text-going-foreground hover:opacity-90"
             >
-              Claim Your Pass <ArrowRight className="size-3.5" />
+              Sign up <ArrowRight className="size-3.5" />
             </button>
           </div>
         </div>
@@ -89,7 +86,7 @@ export function LandingPage({ onStartOnboarding, onStartLogin }: LandingPageProp
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
                 <button
-                  onClick={onStartOnboarding}
+                  onClick={() => navigate("/register")}
                   className="tactile flex items-center justify-center gap-2.5 rounded-xl bg-going px-7 py-4 text-sm font-bold text-going-foreground shadow-xl hover:opacity-95"
                 >
                   Start Swiping Through Events <ArrowRight className="size-4" />
@@ -241,7 +238,7 @@ export function LandingPage({ onStartOnboarding, onStartLogin }: LandingPageProp
                     <button
                       onMouseEnter={() => setMockSwipeDirection("left")}
                       onMouseLeave={() => setMockSwipeDirection(null)}
-                      onClick={onStartOnboarding}
+                      onClick={() => navigate("/register")}
                       className="tactile flex size-11 items-center justify-center rounded-full border border-border bg-surface text-pass hover:bg-pass/10"
                       title="Pass"
                     >
@@ -255,7 +252,7 @@ export function LandingPage({ onStartOnboarding, onStartLogin }: LandingPageProp
                     <button
                       onMouseEnter={() => setMockSwipeDirection("right")}
                       onMouseLeave={() => setMockSwipeDirection(null)}
-                      onClick={onStartOnboarding}
+                      onClick={() => navigate("/register")}
                       className="tactile flex size-11 items-center justify-center rounded-full bg-going text-going-foreground hover:scale-105 shadow-md"
                       title="RSVP Right"
                     >
@@ -317,7 +314,7 @@ export function LandingPage({ onStartOnboarding, onStartLogin }: LandingPageProp
             ].map((region, idx) => (
               <div
                 key={idx}
-                onClick={onStartOnboarding}
+                onClick={() => navigate("/register")}
                 className="group relative cursor-pointer overflow-hidden rounded-xl border border-border bg-surface p-4 transition-all hover:border-going"
               >
                 <div className="h-28 w-full overflow-hidden rounded-lg mb-3">
@@ -498,7 +495,7 @@ export function LandingPage({ onStartOnboarding, onStartLogin }: LandingPageProp
                   </div>
                 </div>
                 <button
-                  onClick={onStartOnboarding}
+                  onClick={() => navigate("/register")}
                   className="tactile rounded-lg bg-surface-2 border border-border px-3 py-2 text-xs font-semibold hover:border-going"
                 >
                   Save Pass
@@ -524,7 +521,7 @@ export function LandingPage({ onStartOnboarding, onStartLogin }: LandingPageProp
 
           <div className="pt-2">
             <button
-              onClick={onStartOnboarding}
+              onClick={() => navigate("/register")}
               className="tactile inline-flex items-center justify-center gap-2 rounded-xl bg-going px-8 py-4 text-sm font-bold text-going-foreground shadow-2xl hover:opacity-95"
             >
               See available events <ArrowRight className="size-4" />

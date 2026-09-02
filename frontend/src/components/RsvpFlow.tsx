@@ -12,14 +12,126 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { DekSheet } from "./Sheet";
-import { QuestionsStep } from "./QuestionsStep";
 import { QrBlock } from "./QrBlock";
-import { downloadIcs, googleCalendarUrl } from "../../lib/calender";
-import { clockTime, fullDate, naira, relativeDay } from "../../lib/format";
-import { makeReference, useEventDek } from "../../lib/store";
-import type { EventItem, Rsvp } from "../../lib/types";
+import { API_BASE_URL } from "../lib/constants";
 
-type Step = "questions" | "tiers" | "payment" | "processing" | "done";
+export interface ExtraQuestion {
+  id: string;
+  label: string;
+  placeholder?: string;
+  type?: string;
+  options?: string[];
+  required?: boolean;
+}
+
+export interface EventItem {
+  id: string;
+  title: string;
+  description: string;
+  banner_url?: string | null;
+  venue_name: string;
+  address?: string | null;
+  state_id: string;
+  start_time: string;
+  end_time: string;
+  category: string;
+  is_free: boolean;
+  price_ngn: number;
+  currency?: string;
+  source_platform: string;
+  source_url?: string | null;
+  requires_custom_fields?: boolean;
+  custom_fields_schema?: ExtraQuestion[];
+}
+
+interface RsvpRecord {
+  eventId: string;
+  createdAt: number;
+  amount: number;
+  answers: Record<string, string>;
+  reference: string;
+}
+
+function makeReference() {
+  return "DEK-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
+function relativeDay(iso: string) {
+  const d = new Date(iso);
+  const today = new Date();
+  const diffDays = Math.round((+d - +today) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  if (diffDays > 1 && diffDays <= 6)
+    return d.toLocaleDateString("en-US", { weekday: "short" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function fullDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function clockTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function naira(n: number) {
+  return "₦" + n.toLocaleString("en-NG");
+}
+
+function googleCalendarUrl(e: EventItem) {
+  const start = new Date(e.start_time)
+    .toISOString()
+    .replace(/-|:|\.\d\d\d/g, "");
+  const end = new Date(e.end_time || +new Date(e.start_time) + 3 * 3600 * 1000)
+    .toISOString()
+    .replace(/-|:|\.\d\d\d/g, "");
+  const details = encodeURIComponent(
+    `${e.description}\n\nVenue: ${e.venue_name}`,
+  );
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
+    e.title,
+  )}&dates=${start}/${end}&details=${details}&location=${encodeURIComponent(
+    e.venue_name,
+  )}`;
+}
+
+function downloadIcs(e: EventItem) {
+  const start = new Date(e.start_time)
+    .toISOString()
+    .replace(/-|:|\.\d\d\d/g, "");
+  const end = new Date(e.end_time || +new Date(e.start_time) + 3 * 3600 * 1000)
+    .toISOString()
+    .replace(/-|:|\.\d\d\d/g, "");
+  const content = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "BEGIN:VEVENT",
+    `SUMMARY:${e.title}`,
+    `DESCRIPTION:${e.description}`,
+    `LOCATION:${e.venue_name}`,
+    `DTSTART:${start}`,
+    `DTEND:${end}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+
+  const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${e.id}.ics`;
+  a.click();
+}
+
+type Step = "questions" | "payment" | "processing" | "done";
 
 const PAYMENT_METHODS = [
   {
@@ -35,87 +147,114 @@ const PAYMENT_METHODS = [
     icon: Building2,
   },
   { id: "ussd", name: "USSD", note: "*737# and friends", icon: Smartphone },
-  { id: "applepay", name: "Apple Pay", note: "One tap", icon: Smartphone },
 ];
 
-export function RsvpFlow({
+export default function RsvpFlow({
   event,
   open,
   onClose,
-  onCancelled,
+  onSuccess,
 }: {
   event: EventItem | null;
   open: boolean;
   onClose: () => void;
-  /** Called when the user backs out before confirming, so the deck can rewind. */
-  onCancelled: () => void;
+  onSuccess?: (eventId: string) => void;
 }) {
-  const { addRsvp, savedAnswers, saveAnswers, profile } = useEventDek();
-  const paid = event?.pricing.kind === "paid";
-  const questions = event?.questions ?? [];
+  const storedUser = localStorage.getItem("eventdek_user");
+  const profile = storedUser ? JSON.parse(storedUser) : null;
+  const token = localStorage.getItem("eventdek_token");
+
+  const questions: ExtraQuestion[] = useMemo(
+    () => event?.custom_fields_schema ?? [],
+    [event?.custom_fields_schema],
+  );
+
+  const isPaid = event ? !event.is_free : false;
 
   const firstStep: Step = useMemo(() => {
-    const unanswered = questions.some((q) => q.required && !savedAnswers[q.id]);
-    if (unanswered) return "questions";
-    return paid ? "tiers" : "processing";
-  }, [questions, savedAnswers, paid]);
+    if (questions.length > 0) return "questions";
+    if (isPaid) return "payment";
+    return "processing";
+  }, [questions.length, isPaid]);
 
   const [step, setStep] = useState<Step>(firstStep);
-  const [answers, setAnswers] = useState<Record<string, string>>(savedAnswers);
-  const [tierId, setTierId] = useState<string>("");
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [method, setMethod] = useState("card");
-  const [ticket, setTicket] = useState<Rsvp | null>(null);
-  const [confirmed, setConfirmed] = useState(false);
+  const [ticket, setTicket] = useState<RsvpRecord | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open || !event) return;
     setStep(firstStep);
-    setAnswers(savedAnswers);
-    setTierId(
-      event.pricing.kind === "paid" ? (event.pricing.tiers[0]?.id ?? "") : "",
-    );
+    setAnswers({});
     setTicket(null);
-    setConfirmed(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, event?.id]);
+    setIsSubmitting(false);
+  }, [open, event?.id, firstStep]);
 
-  const tier =
-    event?.pricing.kind === "paid"
-      ? event.pricing.tiers.find((t) => t.id === tierId)
-      : undefined;
-  const fee = tier ? Math.round(tier.price * 0.015) : 0;
-  const total = tier ? tier.price + fee : 0;
+  const fee = isPaid ? Math.round(Number(event?.price_ngn || 0) * 0.015) : 0;
+  const total = isPaid ? Number(event?.price_ngn || 0) + fee : 0;
 
-  function commit(amount: number, methodId?: string) {
-    if (!event) return;
-    const rsvp: Rsvp = {
-      eventId: event.id,
-      createdAt: Date.now(),
-      tierId: tier?.id,
-      amount,
-      method: methodId,
-      answers,
-      reference: makeReference(),
-    };
-    if (Object.keys(answers).length) saveAnswers(answers);
-    addRsvp(rsvp);
-    setTicket(rsvp);
-    setConfirmed(true);
-    setStep("done");
-  }
+  // Complete RSVP and hit backend
+  const commitRegistration = async () => {
+    if (!event || !token) return;
+    setIsSubmitting(true);
 
-  // Free events confirm instantly, no button press required.
+    try {
+      const res = await fetch(`${API_BASE_URL}/events/swipe`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          event_id: event.id,
+          direction: "right",
+          custom_answers: answers,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Registration failed.");
+      }
+
+      const rsvp: RsvpRecord = {
+        eventId: event.id,
+        createdAt: Date.now(),
+        amount: total,
+        answers,
+        reference: makeReference(),
+      };
+
+      // Save to local device tickets
+      const existingRsvps = JSON.parse(
+        localStorage.getItem("eventdek_rsvps") || "[]",
+      );
+      localStorage.setItem(
+        "eventdek_rsvps",
+        JSON.stringify([rsvp, ...existingRsvps]),
+      );
+
+      setTicket(rsvp);
+      setStep("done");
+      if (onSuccess) onSuccess(event.id);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to complete RSVP.");
+      setStep(questions.length ? "questions" : "payment");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Auto-confirm free events with no questions
   useEffect(() => {
-    if (step !== "processing" || !event) return;
-    const t = setTimeout(() => commit(0), paid ? 1400 : 550);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (step === "processing" && event && !isSubmitting && !ticket) {
+      const timer = setTimeout(() => {
+        commitRegistration();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
   }, [step, event?.id]);
-
-  function close() {
-    if (!confirmed) onCancelled();
-    onClose();
-  }
 
   if (!event) return null;
 
@@ -124,7 +263,7 @@ export function RsvpFlow({
   );
 
   const share = async () => {
-    const text = `I'm going to ${event.title} — ${fullDate(event.start)} at ${event.venue}`;
+    const text = `I'm going to ${event.title} — ${fullDate(event.start_time)} at ${event.venue_name}`;
     try {
       if (navigator.share) await navigator.share({ title: event.title, text });
       else {
@@ -132,21 +271,23 @@ export function RsvpFlow({
         toast.success("Copied to clipboard");
       }
     } catch {
-      /* user dismissed the share sheet */
+      // dismissed
     }
   };
 
   const eyebrow =
     step === "done"
       ? "You're on the list"
-      : paid
+      : isPaid
         ? "Secure checkout · Paystack"
-        : "Instant RSVP";
+        : questions.length > 0
+          ? "Organizer Questions"
+          : "Instant RSVP";
 
   return (
     <DekSheet
       open={open}
-      onClose={close}
+      onClose={onClose}
       eyebrow={eyebrow}
       title={event.title}
       footer={
@@ -154,26 +295,24 @@ export function RsvpFlow({
           <button
             disabled={missingRequired}
             onClick={() => {
-              saveAnswers(answers);
-              setStep(paid ? "tiers" : "processing");
+              if (isPaid) {
+                setStep("payment");
+              } else {
+                setStep("processing");
+                commitRegistration();
+              }
             }}
             className="tactile flex w-full items-center justify-center gap-2 rounded-md bg-going py-3 text-sm font-bold text-going-foreground disabled:opacity-40"
           >
-            Continue <ArrowRight className="size-4" />
-          </button>
-        ) : step === "tiers" ? (
-          <button
-            onClick={() => setStep("payment")}
-            className="tactile flex w-full items-center justify-between gap-2 rounded-md bg-going px-4 py-3 text-sm font-bold text-going-foreground"
-          >
-            <span>Pay {naira(total)}</span>
+            Continue {isPaid ? `to Payment (${naira(total)})` : ""}{" "}
             <ArrowRight className="size-4" />
           </button>
         ) : step === "payment" ? (
           <button
+            disabled={isSubmitting}
             onClick={() => {
               setStep("processing");
-              setTimeout(() => commit(total, method), 0);
+              commitRegistration();
             }}
             className="tactile w-full rounded-md bg-going py-3 text-sm font-bold text-going-foreground"
           >
@@ -181,7 +320,7 @@ export function RsvpFlow({
           </button>
         ) : step === "done" ? (
           <button
-            onClick={close}
+            onClick={onClose}
             className="tactile w-full rounded-md border border-border bg-surface-2 py-3 text-sm font-bold hover:bg-accent"
           >
             Back to the deck
@@ -189,65 +328,55 @@ export function RsvpFlow({
         ) : null
       }
     >
+      {/* 1. Custom Questions Form */}
       {step === "questions" && (
-        <QuestionsStep
-          questions={questions}
-          answers={answers}
-          organizer={event.host.name}
-          onChange={(id, value) => setAnswers((a) => ({ ...a, [id]: value }))}
-        />
-      )}
-
-      {step === "tiers" && event.pricing.kind === "paid" && (
         <div className="space-y-4">
-          <div className="space-y-2">
-            {event.pricing.tiers.map((t) => {
-              const active = t.id === tierId;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setTierId(t.id)}
-                  className={`grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md border p-3 text-left ${
-                    active
-                      ? "border-going bg-going/10"
-                      : "border-border bg-surface hover:bg-accent"
-                  }`}
-                >
-                  <span className="min-w-0">
-                    <span className="block text-sm font-bold">{t.name}</span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {t.note}
-                      {t.seatsLeft ? ` · ${t.seatsLeft} left` : ""}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-sm font-bold tabular-nums">
-                    {naira(t.price)}
-                  </span>
-                </button>
-              );
-            })}
+          <p className="text-xs text-muted-foreground">
+            The organizer needs a few quick details for your pass:
+          </p>
+          <div className="space-y-3">
+            {questions.map((q) => (
+              <label key={q.id} className="block">
+                <span className="label-caps text-muted-foreground text-xs">
+                  {q.label} {q.required && "*"}
+                </span>
+                {q.type === "select" && q.options ? (
+                  <select
+                    className="mt-1.5 w-full rounded-lg border border-input bg-surface px-3.5 py-2.5 text-sm text-foreground outline-none"
+                    value={answers[q.id] || ""}
+                    onChange={(e) =>
+                      setAnswers({ ...answers, [q.id]: e.target.value })
+                    }
+                  >
+                    <option value="">Select an option</option>
+                    {q.options.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    className="mt-1.5 w-full rounded-lg border border-input bg-surface px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                    placeholder={q.placeholder || "Your answer"}
+                    value={answers[q.id] || ""}
+                    onChange={(e) =>
+                      setAnswers({ ...answers, [q.id]: e.target.value })
+                    }
+                  />
+                )}
+              </label>
+            ))}
           </div>
-          <dl className="rounded-md border border-border bg-surface-2 p-3 text-sm">
-            <div className="flex justify-between py-1">
-              <dt className="text-muted-foreground">Ticket</dt>
-              <dd className="tabular-nums">{naira(tier?.price ?? 0)}</dd>
-            </div>
-            <div className="flex justify-between py-1">
-              <dt className="text-muted-foreground">Processing (1.5%)</dt>
-              <dd className="tabular-nums">{naira(fee)}</dd>
-            </div>
-            <div className="mt-1 flex justify-between border-t border-border pt-2 font-bold">
-              <dt>Total</dt>
-              <dd className="tabular-nums">{naira(total)}</dd>
-            </div>
-          </dl>
         </div>
       )}
 
+      {/* 2. Payment Method */}
       {step === "payment" && (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Paying {naira(total)} as {profile?.email ?? "guest@eventdek.ng"}
+            Paying {naira(total)} as {profile?.email || "attendee"}
           </p>
           <div className="grid gap-2">
             {PAYMENT_METHODS.map((m) => {
@@ -256,6 +385,7 @@ export function RsvpFlow({
               return (
                 <button
                   key={m.id}
+                  type="button"
                   onClick={() => setMethod(m.id)}
                   className={`flex items-center gap-3 rounded-md border p-3 text-left ${
                     active
@@ -263,7 +393,7 @@ export function RsvpFlow({
                       : "border-border bg-surface hover:bg-accent"
                   }`}
                 >
-                  <Icon className="size-4 shrink-0" />
+                  <Icon className="size-4 shrink-0 text-going" />
                   <span className="min-w-0">
                     <span className="block text-sm font-semibold">
                       {m.name}
@@ -282,18 +412,20 @@ export function RsvpFlow({
         </div>
       )}
 
+      {/* 3. Processing State */}
       {step === "processing" && (
         <div className="flex flex-col items-center gap-3 py-10 text-center">
           <Loader2 className="size-7 animate-spin text-going" />
           <p className="text-sm font-semibold">
-            {paid ? "Confirming payment…" : "Registering you…"}
+            {isPaid ? "Confirming payment…" : "Registering you…"}
           </p>
           <p className="text-sm text-muted-foreground">
-            Using your saved EventDek profile. Nothing else to fill in.
+            Using your EventDek profile.
           </p>
         </div>
       )}
 
+      {/* 4. Ticket Confirmation State */}
       {step === "done" && ticket && (
         <div className="space-y-4">
           <div className="flex items-center gap-3 rounded-md border border-going/40 bg-going/10 p-3">
@@ -302,11 +434,11 @@ export function RsvpFlow({
             </span>
             <div className="min-w-0">
               <p className="text-sm font-bold">
-                {paid ? "Payment confirmed" : "RSVP confirmed"}
+                {isPaid ? "Payment confirmed" : "RSVP confirmed"}
               </p>
               <p className="truncate text-xs text-muted-foreground">
-                Ref {ticket.reference} · {relativeDay(event.start)},{" "}
-                {clockTime(event.start)}
+                Ref {ticket.reference} · {relativeDay(event.start_time)},{" "}
+                {clockTime(event.start_time)}
               </p>
             </div>
           </div>
@@ -319,7 +451,7 @@ export function RsvpFlow({
                 {ticket.reference}
               </p>
               <p className="mt-1 truncate text-muted-foreground">
-                {event.venue}
+                {event.venue_name}
               </p>
             </div>
           </div>
@@ -334,12 +466,14 @@ export function RsvpFlow({
               <CalendarPlus className="size-4" /> Google Calendar
             </a>
             <button
+              type="button"
               onClick={() => downloadIcs(event)}
               className="tactile flex items-center justify-center gap-2 rounded-md border border-border bg-surface py-2.5 text-sm font-semibold hover:bg-accent"
             >
               <Download className="size-4" /> Apple / Outlook .ics
             </button>
             <button
+              type="button"
               onClick={share}
               className="tactile flex items-center justify-center gap-2 rounded-md border border-border bg-surface py-2.5 text-sm font-semibold hover:bg-accent sm:col-span-2"
             >

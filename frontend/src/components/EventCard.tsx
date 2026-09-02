@@ -1,10 +1,63 @@
-import { BadgeCheck, Clock, Info, MapPin, Users } from "lucide-react";
-import { categoryName } from "../../lib/data";
-import { clockTime, countdown, fullDate, relativeDay } from "../../lib/format";
-import type { EventItem } from "../../lib/types";
-import { PriceBadge } from "./PriceBadge";
+import { Clock, Info, MapPin, Globe } from "lucide-react";
 
-export function EventCard({
+export interface EventItem {
+  id: string;
+  title: string;
+  description: string;
+  banner_url?: string | null;
+  venue_name: string;
+  address?: string | null;
+  state_id: string;
+  start_time: string;
+  end_time: string;
+  category: string;
+  is_free: boolean;
+  price_ngn: number;
+  currency?: string;
+  source_platform: string;
+  source_url?: string | null;
+  requires_custom_fields?: boolean;
+  custom_fields_schema?: any[];
+}
+
+function relativeDay(iso: string) {
+  const d = new Date(iso);
+  const today = new Date();
+  const diffDays = Math.round((+d - +today) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  if (diffDays > 1 && diffDays <= 6)
+    return d.toLocaleDateString("en-US", { weekday: "short" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function fullDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function clockTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function countdown(iso: string) {
+  const target = new Date(iso).getTime();
+  const now = Date.now();
+  const diff = target - now;
+  if (diff <= 0) return "Started";
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  if (hours < 24) return `in ${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `in ${days}d`;
+}
+
+export default function EventCard({
   event,
   onExpand,
   interactive = true,
@@ -14,83 +67,92 @@ export function EventCard({
   interactive?: boolean;
 }) {
   return (
-    <article className="card-frame relative flex h-full flex-col rounded-xl">
-      <div className="relative aspect-[16/11] w-full shrink-0 overflow-hidden rounded-t-xl bg-surface-2">
+    <article className="card-frame relative flex h-full flex-col rounded-xl overflow-hidden border border-border bg-card shadow-md">
+      {/* Banner & Floating Badges */}
+      <div className="relative aspect-[16/11] w-full shrink-0 overflow-hidden bg-surface-2">
         <img
-          src={event.image}
+          src={
+            event.banner_url ||
+            "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&auto=format&fit=crop&q=80"
+          }
           alt={event.title}
-          width={1024}
-          height={1280}
           draggable={false}
-          className="size-full object-cover"
+          className="size-full object-cover select-none pointer-events-none"
         />
         <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-background via-background/60 to-transparent p-3 pb-4">
-          <span className="label-caps rounded border border-going/50 bg-going/15 px-2 py-1 text-going backdrop-blur">
-            {categoryName(event.category)}
+          <span className="label-caps rounded border border-going/50 bg-going/15 px-2 py-1 text-going backdrop-blur capitalize font-bold text-xs">
+            {event.category}
           </span>
-          <span className="numeric flex items-center gap-1.5 rounded border border-border bg-background/50 px-2 py-1 text-xs font-medium text-foreground backdrop-blur">
-            <Clock className="size-3" />
-            {countdown(event.start)}
+          <span
+            className={`rounded-full px-2.5 py-1 text-xs font-bold shadow-sm ${
+              event.is_free
+                ? "bg-going text-going-foreground"
+                : "bg-surface text-foreground border border-border"
+            }`}
+          >
+            {event.is_free ? "FREE" : `₦${event.price_ngn.toLocaleString()}`}
           </span>
         </div>
       </div>
 
-      <div className="perforate flex min-h-0 flex-1 flex-col gap-3 p-4 pt-5">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-          <div className="min-w-0">
-            <p className="numeric text-[11px] font-medium uppercase tracking-widest text-going">
-              {relativeDay(event.start)} · {fullDate(event.start)} ·{" "}
-              {clockTime(event.start)}
-            </p>
-            <h3 className="display mt-1.5 text-xl font-extrabold leading-[1.05] sm:text-2xl">
-              {event.title}
-            </h3>
+      {/* Card Body */}
+      <div className="flex min-h-0 flex-1 flex-col justify-between p-4">
+        <div>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="flex items-center gap-1 font-semibold text-going">
+              <Clock className="size-3.5" />
+              {relativeDay(event.start_time)}
+            </span>
+            <span className="numeric">{countdown(event.start_time)}</span>
           </div>
-          <div className="shrink-0 pt-1">
-            <PriceBadge event={event} />
-          </div>
+
+          <h2 className="display mt-1 text-lg font-bold leading-tight line-clamp-2">
+            {event.title}
+          </h2>
+          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground leading-relaxed">
+            {event.description}
+          </p>
         </div>
 
-        <p className="line-clamp-2 shrink-0 text-sm text-muted-foreground">
-          {event.tagline}
-        </p>
-
-        <dl className="grid shrink-0 gap-2 border-t border-border pt-3 text-sm">
-          <div className="flex min-w-0 items-start gap-2">
-            <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-            <span className="min-w-0">
-              <span className="block font-semibold">{event.area}</span>
-              <span className="block truncate text-muted-foreground">
-                {event.venue}
+        {/* Card Footer Details */}
+        <div className="mt-3 space-y-2 border-t border-border pt-3 text-xs">
+          <div className="flex items-center justify-between gap-2 text-muted-foreground">
+            <span className="flex items-center gap-1.5 min-w-0">
+              <Globe className="size-3.5 shrink-0 text-going" />
+              <span className="font-semibold text-foreground truncate capitalize">
+                {event.source_platform || "Native Event"}
               </span>
             </span>
-          </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-foreground text-[11px] font-bold text-background">
-                {event.host.name.slice(0, 1)}
-              </span>
-              <span className="truncate font-medium">{event.host.name}</span>
-              {event.host.verified && (
-                <BadgeCheck className="size-4 shrink-0 text-going" />
-              )}
-            </span>
-            <span className="numeric flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
-              <Users className="size-4" />
-              {event.attendees.toLocaleString()} going
+            <span className="font-mono text-[11px] uppercase">
+              {event.state_id}
             </span>
           </div>
-        </dl>
 
-        {interactive && onExpand && (
-          <button
-            onClick={onExpand}
-            className="tactile mt-auto flex items-center justify-center gap-2 rounded-md border border-border bg-surface-2 py-2.5 text-sm font-semibold hover:bg-accent"
-          >
-            <Info className="size-4" />
-            Agenda, speakers & details
-          </button>
-        )}
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="flex items-center gap-1 truncate">
+              <MapPin className="size-3.5 shrink-0 text-going" />
+              <span className="truncate">{event.venue_name}</span>
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
+            <span className="numeric text-[11px] text-muted-foreground">
+              {fullDate(event.start_time)} · {clockTime(event.start_time)}
+            </span>
+            {interactive && onExpand && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onExpand();
+                }}
+                className="tactile flex items-center gap-1 rounded bg-surface-2 px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-accent transition-colors"
+              >
+                <Info className="size-3" /> Info
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </article>
   );

@@ -1,11 +1,61 @@
-import { CalendarClock, MapPin, Mic, Users } from "lucide-react";
+import { CalendarClock, MapPin, ExternalLink, Tag } from "lucide-react";
 import { DekSheet } from "./Sheet";
-import { PriceBadge } from "./PriceBadge";
-import { categoryName, stateName } from "../../lib/data";
-import { clockTime, fullDate, relativeDay } from "../../lib/format";
-import type { EventItem } from "../../lib/types";
+import { NG_STATES } from "../lib/constants";
 
-export function DetailsSheet({
+// Self-contained EventItem matching your backend schema
+export interface EventItem {
+  id: string;
+  title: string;
+  description: string;
+  banner_url?: string | null;
+  venue_name: string;
+  address?: string | null;
+  state_id: string;
+  start_time: string;
+  end_time: string;
+  category: string;
+  is_free: boolean;
+  price_ngn: number;
+  currency?: string;
+  source_platform: string;
+  source_url?: string | null;
+  requires_custom_fields?: boolean;
+  custom_fields_schema?: any[];
+}
+
+function relativeDay(iso: string) {
+  const d = new Date(iso);
+  const today = new Date();
+  const diffDays = Math.round((+d - +today) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  if (diffDays > 1 && diffDays <= 6)
+    return d.toLocaleDateString("en-US", { weekday: "short" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function fullDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function clockTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatState(id: string) {
+  return (
+    NG_STATES.find((s) => s.id.toLowerCase() === id.toLowerCase())?.name || id
+  );
+}
+
+export default function DetailsSheet({
   event,
   open,
   onClose,
@@ -24,109 +74,101 @@ export function DetailsSheet({
     <DekSheet
       open={open}
       onClose={onClose}
-      eyebrow={`${categoryName(event.category)} · ${stateName(event.stateId)}`}
+      eyebrow={`${event.category.toUpperCase()} · ${formatState(event.state_id)}`}
       title={event.title}
       footer={
         <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={() => {
-              onClose();
-              onPass();
-            }}
-            className="tactile rounded-md border border-pass/50 bg-pass/10 py-3 text-sm font-bold text-pass"
+            onClick={onPass}
+            className="tactile rounded-md border border-border bg-surface py-2.5 text-sm font-semibold text-pass hover:bg-pass/10"
           >
-            Pass
+            Pass event
           </button>
           <button
-            onClick={() => {
-              onClose();
-              onRsvp();
-            }}
-            className="tactile rounded-md bg-going py-3 text-sm font-bold text-going-foreground"
+            onClick={onRsvp}
+            className="tactile rounded-md bg-going py-2.5 text-sm font-bold text-going-foreground"
           >
-            {event.pricing.kind === "paid" ? "Get tickets" : "RSVP now"}
+            {event.is_free
+              ? "RSVP (Free)"
+              : `Get Ticket · ₦${event.price_ngn.toLocaleString()}`}
           </button>
         </div>
       }
     >
-      <div className="space-y-5">
-        <div className="flex flex-wrap items-center gap-2">
-          <PriceBadge event={event} />
-          <span className="flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-sm font-semibold">
-            <Users className="size-3.5" />
-            {event.attendees.toLocaleString()} /{" "}
-            {event.capacity.toLocaleString()}
-          </span>
+      <div className="space-y-4">
+        {/* Banner with Badge */}
+        <div className="relative aspect-video overflow-hidden rounded-lg bg-surface-2">
+          <img
+            src={
+              event.banner_url ||
+              "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&auto=format&fit=crop&q=80"
+            }
+            alt={event.title}
+            className="size-full object-cover"
+          />
+          <div className="absolute top-2 right-2">
+            <span
+              className={`rounded-full px-2.5 py-1 text-xs font-bold shadow-sm ${
+                event.is_free
+                  ? "bg-going text-going-foreground"
+                  : "bg-surface text-foreground border border-border"
+              }`}
+            >
+              {event.is_free ? "FREE" : `₦${event.price_ngn.toLocaleString()}`}
+            </span>
+          </div>
         </div>
 
-        <div className="grid gap-3 rounded-md border border-border bg-surface-2 p-3 text-sm">
-          <div className="flex items-start gap-2">
-            <CalendarClock className="mt-0.5 size-4 shrink-0 text-going" />
+        {/* Source & Platform info */}
+        <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
+          <div>
+            <p className="label-caps text-muted-foreground">Source</p>
+            <p className="font-semibold capitalize">
+              {event.source_platform || "EventDek native"}
+            </p>
+          </div>
+          {event.source_url && (
+            <a
+              href={event.source_url}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1 text-xs font-semibold text-going hover:underline"
+            >
+              Original Link <ExternalLink className="size-3" />
+            </a>
+          )}
+        </div>
+
+        {/* Schedule & Location */}
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <CalendarClock className="size-4 shrink-0 text-going" />
             <span>
-              <span className="block font-semibold">
-                {relativeDay(event.start)} · {fullDate(event.start)}
-              </span>
-              <span className="text-muted-foreground">
-                {clockTime(event.start)} – {event.endTime}
-              </span>
+              {relativeDay(event.start_time)} · {fullDate(event.start_time)} ·{" "}
+              {clockTime(event.start_time)}
             </span>
           </div>
-          <div className="flex items-start gap-2">
-            <MapPin className="mt-0.5 size-4 shrink-0 text-going" />
-            <span className="min-w-0">
-              <span className="block font-semibold">{event.area}</span>
-              <span className="text-muted-foreground">{event.venue}</span>
+
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <MapPin className="size-4 shrink-0 text-going" />
+            <span>
+              {event.venue_name} {event.address ? `(${event.address})` : ""}
             </span>
+          </div>
+
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Tag className="size-4 shrink-0 text-going" />
+            <span className="capitalize">{event.category} Event</span>
           </div>
         </div>
 
-        <section>
-          <h3 className="label-caps text-muted-foreground">About</h3>
-          <p className="mt-2 text-sm leading-relaxed">{event.description}</p>
-        </section>
-
-        <section>
-          <h3 className="label-caps text-muted-foreground">Run of show</h3>
-          <ol className="mt-2 space-y-0">
-            {event.agenda.map((row) => (
-              <li
-                key={row.time + row.item}
-                className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 border-b border-border py-2.5 text-sm last:border-b-0"
-              >
-                <span className="font-semibold tabular-nums text-muted-foreground">
-                  {row.time}
-                </span>
-                <span>{row.item}</span>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        {event.speakers && (
-          <section>
-            <h3 className="label-caps text-muted-foreground">Speakers</h3>
-            <ul className="mt-2 grid gap-2">
-              {event.speakers.map((s) => (
-                <li
-                  key={s.name}
-                  className="flex items-center gap-3 rounded-md border border-border p-2.5"
-                >
-                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-foreground text-sm font-bold text-background">
-                    <Mic className="size-4" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold">
-                      {s.name}
-                    </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {s.role}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+        {/* Description */}
+        <div>
+          <h3 className="label-caps text-muted-foreground">About the Event</h3>
+          <p className="mt-1 text-sm text-foreground leading-relaxed whitespace-pre-line">
+            {event.description}
+          </p>
+        </div>
       </div>
     </DekSheet>
   );

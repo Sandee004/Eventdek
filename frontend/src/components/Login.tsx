@@ -1,49 +1,58 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ArrowRight, Eye, EyeOff, KeyRound, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useEventDek } from "../../lib/store";
-import { loginApi } from "../../lib/api";
+import { API_BASE_URL } from "../lib/constants";
 
-interface LoginProps {
-  onSwitchToRegister?: () => void;
-}
-
-export function Login({ onSwitchToRegister }: LoginProps) {
-  const { login } = useEventDek();
+export default function Login() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isValid = /.+.@.+\..+/.test(email) && password.length >= 6;
-
   const fieldStyle =
     "mt-1.5 w-full rounded-lg border border-input bg-surface px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground transition-all focus:border-ring focus:ring-1 focus:ring-ring";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValid || loading) return;
+    if (loading) return;
+
+    // Inline validation feedback
+    if (!/.+@.+\..+/.test(email.trim())) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      const res = await loginApi({ email, password });
-      login(
-        {
-          id: res.user.id,
-          name: res.user.name,
-          email: res.user.email,
-          phone: res.user.phone,
-          stateId: res.user.stateId,
-          cityArea: res.user.cityArea || "",
-          role: res.user.role || "",
-          handle: res.user.handle || "",
-          calendarSync: res.user.calendarSync,
-        },
-        res.access_token,
-      );
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.detail || "Invalid email or password.");
+      }
+
+      // Save credentials directly to localStorage
+      localStorage.setItem("eventdek_token", data.access_token);
+      localStorage.setItem("eventdek_user", JSON.stringify(data.user));
+
+      navigate("/homepage");
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -94,7 +103,7 @@ export function Login({ onSwitchToRegister }: LoginProps) {
         </div>
 
         {error && (
-          <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive">
+          <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs font-medium text-destructive">
             {error}
           </div>
         )}
@@ -106,10 +115,12 @@ export function Login({ onSwitchToRegister }: LoginProps) {
             </span>
             <input
               type="email"
-              required
               className={fieldStyle}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setError(null);
+                setEmail(e.target.value);
+              }}
               placeholder="you@domain.com"
             />
           </label>
@@ -123,10 +134,12 @@ export function Login({ onSwitchToRegister }: LoginProps) {
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                required
                 className={`${fieldStyle} pr-10`}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setError(null);
+                  setPassword(e.target.value);
+                }}
                 placeholder="••••••••••••"
               />
               <button
@@ -147,8 +160,8 @@ export function Login({ onSwitchToRegister }: LoginProps) {
 
           <button
             type="submit"
-            disabled={!isValid || loading}
-            className="tactile mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-going py-3 text-sm font-bold text-going-foreground shadow-lg disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={loading}
+            className="tactile mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-going py-3 text-sm font-bold text-going-foreground shadow-lg hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-50"
           >
             {loading ? (
               <>
@@ -162,18 +175,16 @@ export function Login({ onSwitchToRegister }: LoginProps) {
           </button>
         </form>
 
-        {onSwitchToRegister && (
-          <div className="mt-6 text-center text-xs text-muted-foreground border-t border-border pt-4">
-            Don't have an event pass yet?{" "}
-            <button
-              type="button"
-              onClick={onSwitchToRegister}
-              className="font-bold text-going hover:underline"
-            >
-              Sign Up / Claim Pass
-            </button>
-          </div>
-        )}
+        <div className="mt-6 text-center text-xs text-muted-foreground border-t border-border pt-4">
+          Don't have an event pass yet?{" "}
+          <button
+            type="button"
+            onClick={() => navigate("/onboarding")}
+            className="font-bold text-going hover:underline"
+          >
+            Sign Up / Claim Pass
+          </button>
+        </div>
       </motion.div>
     </div>
   );

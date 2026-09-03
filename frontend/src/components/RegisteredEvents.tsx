@@ -4,7 +4,6 @@ import {
   CalendarClock,
   CalendarPlus,
   Download,
-  ExternalLink,
   Loader2,
   MapPin,
   QrCode,
@@ -175,30 +174,31 @@ export function MyDek() {
   }, [registrations, tab]);
 
   return (
-    <>
-      <AppHeader />
+    <div className="relative min-h-screen w-full overflow-x-hidden">
       <AmbientBackground />
-      <div className="mx-auto max-w-3xl px-4 py-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-6">
+
+      <AppHeader />
+
+      <main className="relative z-10 mx-auto max-w-5xl px-4 pt-6 pb-16 sm:px-6 sm:pt-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-6">
           <div>
             <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">
-              My Dek
+              Events Registered
             </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
               Your confirmed access passes and ticket vouchers.
             </p>
           </div>
 
-          {/* Tab Controls */}
-          <div className="inline-flex rounded-lg border border-border bg-surface-2 p-1 self-start sm:self-auto">
+          <div className="inline-flex rounded-xl border border-border bg-surface-2/60 p-1 self-start sm:self-auto backdrop-blur-sm">
             {(["upcoming", "past"] as const).map((t) => (
               <button
                 key={t}
+                type="button"
                 onClick={() => setTab(t)}
-                className={`rounded-md px-4 py-1.5 text-xs font-semibold capitalize transition-colors ${
+                className={`rounded-lg px-4 py-1.5 text-xs font-semibold capitalize transition-all ${
                   tab === t
-                    ? "bg-going text-going-foreground shadow-sm"
+                    ? "bg-going text-going-foreground font-bold shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -217,21 +217,22 @@ export function MyDek() {
           </div>
         </div>
 
-        {/* Loading state */}
         {loading && (
-          <div className="flex items-center justify-center gap-2 py-20 text-xs font-mono text-muted-foreground">
+          <div className="flex items-center justify-center gap-2 py-24 text-xs font-mono text-muted-foreground">
             <Loader2 className="size-4 animate-spin text-going" /> Loading your
             passes...
           </div>
         )}
 
-        {/* Empty state */}
+        {/* Empty State */}
         {!loading && filteredPasses.length === 0 && (
-          <div className="card-frame my-12 rounded-2xl border border-border bg-card p-10 text-center">
+          <div className="card-frame my-12 rounded-2xl border border-border bg-card/90 p-10 sm:p-12 text-center shadow-xl backdrop-blur-sm">
             <span className="mx-auto grid size-12 place-items-center rounded-2xl border border-border bg-surface-2 text-going">
               <Ticket className="size-6" />
             </span>
-            <h2 className="mt-4 text-lg font-bold">No {tab} passes found</h2>
+            <h2 className="mt-4 font-display text-lg font-bold">
+              No {tab} passes found
+            </h2>
             <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
               {tab === "upcoming"
                 ? "Swipe right on an event in the deck to claim a free pass or purchase a ticket."
@@ -248,24 +249,24 @@ export function MyDek() {
           </div>
         )}
 
-        {/* Passes List */}
+        {/* Responsive Passes Grid */}
         {!loading && filteredPasses.length > 0 && (
-          <ul className="mt-6 space-y-4">
+          <ul className="mt-6 grid gap-4 sm:grid-cols-2">
             {filteredPasses.map((pass) => {
               const passToken = pass.qr_code_token || pass.reference || pass.id;
               return (
                 <li
                   key={pass.id}
-                  className="card-frame overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:border-border/80"
+                  className="card-frame flex flex-col justify-between overflow-hidden rounded-2xl border border-border bg-card/90 shadow-sm backdrop-blur-sm transition-all hover:border-border/90"
                 >
                   <div className="grid gap-4 p-5 sm:grid-cols-[auto_minmax(0,1fr)] items-start">
-                    {/* QR Code Block */}
+                    {/* QR Code Container */}
                     <div
                       onClick={() => setSelectedPass(pass)}
-                      className="cursor-pointer group relative grid size-28 shrink-0 place-items-center rounded-xl border border-border bg-surface-2 p-2"
+                      className="cursor-pointer group relative grid size-26 shrink-0 place-items-center rounded-xl border border-border bg-surface-2 p-2"
                       title="Click to expand pass QR"
                     >
-                      <QrBlock value={passToken} size={96} />
+                      <QrBlock value={passToken} size={88} />
                       <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity">
                         <span className="text-[10px] font-bold text-going flex items-center gap-1">
                           <QrCode className="size-3" /> View
@@ -274,43 +275,41 @@ export function MyDek() {
                     </div>
 
                     {/* Pass Metadata */}
-                    <div className="min-w-0 flex flex-col justify-between h-full space-y-2">
-                      <div>
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="label-caps font-bold text-going flex items-center gap-1">
-                            <CalendarClock className="size-3" />
-                            {relativeDay(pass.event_start_time)} ·{" "}
-                            {fullDate(pass.event_start_time)}
-                          </span>
-                          <span className="rounded-full bg-going/15 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-going">
-                            {pass.registration_status || "Confirmed"}
-                          </span>
-                        </div>
-
-                        <h2 className="mt-1 truncate text-lg font-bold">
-                          {pass.event_title}
-                        </h2>
-
-                        <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground truncate">
-                          <MapPin className="size-3.5 shrink-0 text-going" />
-                          <span className="truncate">
-                            {pass.event_venue_name}
-                          </span>
-                          {pass.event_address && (
-                            <span className="truncate">
-                              ({pass.event_address})
-                            </span>
-                          )}
-                        </p>
+                    <div className="min-w-0 space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="label-caps font-bold text-going text-[10px] flex items-center gap-1 truncate">
+                          <CalendarClock className="size-3 shrink-0" />
+                          {relativeDay(pass.event_start_time)} ·{" "}
+                          {fullDate(pass.event_start_time)}
+                        </span>
+                        <span className="rounded-full bg-going/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase text-going shrink-0">
+                          {pass.registration_status || "Confirmed"}
+                        </span>
                       </div>
+
+                      <h2 className="truncate font-display text-base font-bold leading-snug">
+                        {pass.event_title}
+                      </h2>
+
+                      <p className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+                        <MapPin className="size-3.5 shrink-0 text-going" />
+                        <span className="truncate">
+                          {pass.event_venue_name}
+                        </span>
+                        {pass.event_address && (
+                          <span className="truncate">
+                            ({pass.event_address})
+                          </span>
+                        )}
+                      </p>
 
                       <div className="flex flex-wrap items-center gap-2 pt-1">
                         {pass.category && (
-                          <span className="rounded border border-border bg-surface-2 px-2 py-0.5 text-[11px] font-semibold capitalize">
+                          <span className="rounded border border-border bg-surface-2 px-2 py-0.5 text-[10px] font-semibold capitalize">
                             {pass.category}
                           </span>
                         )}
-                        <span className="rounded border border-border bg-surface-2 px-2 py-0.5 font-mono text-[11px] text-muted-foreground">
+                        <span className="rounded border border-border bg-surface-2 px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
                           Ref: {passToken.slice(0, 10)}
                         </span>
                       </div>
@@ -318,12 +317,12 @@ export function MyDek() {
                   </div>
 
                   {/* Card Action Footer */}
-                  <div className="grid grid-cols-2 divide-x divide-border border-t border-border bg-surface-2/40 sm:grid-cols-3">
+                  <div className="grid grid-cols-2 divide-x divide-border border-t border-border bg-surface-2/40 text-xs">
                     <a
                       href={googleCalendarUrl(pass)}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors"
+                      className="flex items-center justify-center gap-1.5 py-2.5 font-semibold text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors"
                     >
                       <CalendarPlus className="size-3.5 text-going" /> Calendar
                     </a>
@@ -331,23 +330,10 @@ export function MyDek() {
                     <button
                       type="button"
                       onClick={() => downloadIcs(pass)}
-                      className="flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors"
+                      className="flex items-center justify-center gap-1.5 py-2.5 font-semibold text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors"
                     >
                       <Download className="size-3.5 text-going" /> .ics File
                     </button>
-
-                    {pass.event_source_url ? (
-                      <a
-                        href={pass.event_source_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors border-t sm:border-t-0 border-border"
-                      >
-                        Event Link <ExternalLink className="size-3" />
-                      </a>
-                    ) : (
-                      <div className="col-span-2 sm:col-span-1" />
-                    )}
                   </div>
                 </li>
               );
@@ -371,14 +357,6 @@ export function MyDek() {
               </h3>
 
               <div className="flex justify-center py-2">
-                {/* <QrBlock
-                value={
-                  selectedPass.qr_code_token ||
-                  selectedPass.reference ||
-                  selectedPass.id
-                }
-                size={180}
-              /> */}
                 <QrBlock
                   value={`${window.location.origin}/verify-pass/${selectedPass.qr_code_token || selectedPass.reference || selectedPass.id}`}
                   size={160}
@@ -404,7 +382,7 @@ export function MyDek() {
             </div>
           </div>
         )}
-      </div>
-    </>
+      </main>
+    </div>
   );
 }

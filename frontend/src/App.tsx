@@ -7,6 +7,7 @@ import Login from "./components/Login";
 import Onboarding from "./components/Onboarding";
 import Home from "./components/Homepage";
 import { MyDek } from "./components/RegisteredEvents";
+import Profile from "./components/Profile";
 
 // export function filterDeck(
 //   events,
@@ -287,6 +288,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/homepage" element={<Home />} />
           <Route path="/registered-events" element={<MyDek />} />
+          <Route path="/profile" element={<Profile />} />
         </Routes>
         <Toaster position="top-center" />
       </BrowserRouter>

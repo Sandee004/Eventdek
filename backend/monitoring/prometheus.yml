@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 15s # How often to query targets
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "eventdek_backend"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["localhost:8000"] # Change to host.docker.internal:8000 if running Prometheus in Docker

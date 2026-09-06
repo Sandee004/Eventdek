@@ -2,10 +2,11 @@ import os
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
@@ -17,19 +18,14 @@ from services.scraper import run_event_scraper_job
 
 load_dotenv()
 
-# Only trigger frontend build locally if not running on Render
-#if os.getenv("RENDER", "false").lower() != "true":
-build_frontend()
+if os.getenv("RENDER", "false").lower() != "true":
+    build_frontend()
 
 scheduler = AsyncIOScheduler()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    1. Create database schema tables on startup.
-    2. Start background event scraper worker.
-    """
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -78,14 +74,35 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(events.router)
 
+from monitoring.metrics import EVENTS_INGESTED, SCRAPE_RUNS
+
+@app.get("/trigger-test-metric", tags=["system"])
+async def trigger_test():
+    # 1. Fire sample data into the live server memory
+    EVENTS_INGESTED.labels(source_platform="eventbrite", state_id="lagos").inc(12)
+    SCRAPE_RUNS.labels(source_platform="eventbrite", status="success").inc()
+    return {"status": "metrics updated in uvicorn process"}
+
+@app.post("/trigger-scraper", tags=["system"])
+async def trigger_full_scrape():
+    # 2. Or run the actual full scraper inside Uvicorn
+    import asyncio
+    asyncio.create_task(run_event_scraper_job())
+    return {"status": "scraper started in background"}
 
 @app.get("/health", tags=["system"])
 def health_check():
     return {"status": "ok"}
 
 
+# Explicit Prometheus Exporter Endpoint (Prioritized over SPA fallback)
+@app.get("/metrics", tags=["system"])
+def get_prometheus_metrics():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
 # ------------------------------
-# Static Files & React SPA Fallback
+# Static Files & React SPA Fallback (Must remain at bottom)
 # ------------------------------
 assets_path = os.path.join(DIST_DIR, "assets")
 if os.path.exists(assets_path):
@@ -99,17 +116,19 @@ async def favicon():
     file_path = os.path.join(DIST_DIR, "favicon.ico")
     if os.path.exists(file_path):
         return FileResponse(file_path)
-    return FileResponse(os.path.join(DIST_DIR, "index.html")) if os.path.exists(os.path.join(DIST_DIR, "index.html")) else {"error": "Favicon not found"}
+    return (
+        FileResponse(os.path.join(DIST_DIR, "index.html"))
+        if os.path.exists(os.path.join(DIST_DIR, "index.html"))
+        else {"error": "Favicon not found"}
+    )
 
 
 @app.get("/{full_path:path}", include_in_schema=False)
 async def serve_react(full_path: str):
-    # Check if a static file directly matches (e.g. manifest.json, robots.txt, vite.svg)
     potential_file = os.path.join(DIST_DIR, full_path)
     if full_path and os.path.isfile(potential_file):
         return FileResponse(potential_file)
 
-    # Fallback to index.html for React SPA client-side routes
     index_path = os.path.join(DIST_DIR, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)

@@ -22,6 +22,8 @@ httpx==0.28.1
 idna==3.18
 nodeenv==1.10.0
 playwright==1.62.0
+playwright-stealth==2.0.3
+prometheus_client==0.26.0
 pycparser==3.0
 pydantic==2.13.4
 pydantic_core==2.46.4

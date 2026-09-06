@@ -23,7 +23,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("eventdek.scraper")
 
 BASE_URL = "https://www.eventbrite.com/d/nigeria/all-events/"
-TOTAL_PAGES = 3
+TOTAL_PAGES = 5
 
 
 def resolve_state_id(text: str) -> str:

@@ -355,11 +355,12 @@
 //   );
 // }
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   motion,
   useMotionValue,
   useTransform,
+  animate,
   type PanInfo,
 } from "framer-motion";
 import {
@@ -371,13 +372,15 @@ import {
   X,
   Check,
   Loader2,
+  ChevronDown,
+  MapPin,
+  Filter,
 } from "lucide-react";
 import EventCard from "./EventCard";
 import DetailsSheet from "./DetailsSheet";
-import RsvpFlow from "./RsvpFlow";
+import { AmbientBackground } from "../components/AmbientBg";
+import { AppHeader } from "../components/AppHeader";
 import { API_BASE_URL, NG_STATES } from "../lib/constants";
-import { AppHeader } from "./AppHeader";
-import { AmbientBackground } from "./AmbientBg";
 
 const SWIPE_THRESHOLD = 110;
 
@@ -409,13 +412,15 @@ export default function Home() {
   const storedUser = localStorage.getItem("eventdek_user");
   const userState = storedUser ? JSON.parse(storedUser)?.state_id : "lagos";
   const [stateId, setStateId] = useState<string>(userState || "lagos");
+  const [pricingFilter, setPricingFilter] = useState<"all" | "free" | "paid">(
+    "all",
+  );
 
   const [lastAction, setLastAction] = useState<{
     event: EventItem;
     type: "pass" | "rsvp";
   } | null>(null);
   const [details, setDetails] = useState<EventItem | null>(null);
-  const [checkout, setCheckout] = useState<EventItem | null>(null);
 
   const fetchDeckEvents = useCallback(async () => {
     const token = localStorage.getItem("eventdek_token");
@@ -426,7 +431,7 @@ export default function Home() {
 
     try {
       const res = await fetch(
-        `${API_BASE_URL}/events/deck?state_id=${encodeURIComponent(stateId)}&limit=15`,
+        `${API_BASE_URL}/events/deck?state_id=${encodeURIComponent(stateId)}&limit=25`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -445,6 +450,17 @@ export default function Home() {
   useEffect(() => {
     fetchDeckEvents();
   }, [fetchDeckEvents]);
+
+  const filteredDeck = useMemo(() => {
+    return deck.filter((event) => {
+      if (pricingFilter === "free") return event.is_free;
+      if (pricingFilter === "paid") return !event.is_free;
+      return true;
+    });
+  }, [deck, pricingFilter]);
+
+  const top = filteredDeck[0];
+  const next = filteredDeck[1];
 
   const sendSwipeToBackend = async (
     eventId: string,
@@ -467,37 +483,71 @@ export default function Home() {
     }
   };
 
-  const top = deck[0];
-  const next = deck[1];
-
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-260, 0, 260], [-14, 0, 14]);
   const passOpacity = useTransform(x, [-110, -25, 0], [1, 0, 0]);
   const rsvpOpacity = useTransform(x, [0, 25, 110], [0, 0, 1]);
 
-  const popTopCard = () => {
-    setDeck((prev) => prev.slice(1));
-    x.set(0);
-  };
-
   const handlePass = (event: EventItem) => {
-    setLastAction({ event, type: "pass" });
-    popTopCard();
-    sendSwipeToBackend(event.id, "left");
+    // Animate card off screen to the left
+    animate(x, -500, {
+      duration: 0.22,
+      ease: "easeOut",
+      onComplete: () => {
+        setLastAction({ event, type: "pass" });
+        setDeck((prev) => prev.filter((item) => item.id !== event.id));
+        x.set(0);
+        sendSwipeToBackend(event.id, "left");
+      },
+    });
   };
 
   const handleRsvp = (event: EventItem) => {
-    if (
-      !event.is_free ||
-      (event.custom_fields_schema && event.custom_fields_schema.length > 0)
-    ) {
-      setCheckout(event);
-      x.set(0);
-      return;
-    }
-    setLastAction({ event, type: "rsvp" });
-    popTopCard();
-    sendSwipeToBackend(event.id, "right");
+    // 1. Animate card completely off the screen to the right
+    animate(x, 500, {
+      duration: 0.22,
+      ease: "easeOut",
+      onComplete: () => {
+        // 2. Pop card and save history
+        setLastAction({ event, type: "rsvp" });
+        setDeck((prev) => prev.filter((item) => item.id !== event.id));
+        x.set(0);
+
+        // 3. Send record to backend
+        sendSwipeToBackend(event.id, "right");
+
+        // 4. Update local passes for My Dek
+        const storedRsvps = JSON.parse(
+          localStorage.getItem("eventdek_rsvps") || "[]",
+        );
+        const newPass = {
+          id: event.id,
+          event_id: event.id,
+          event_title: event.title,
+          event_banner_url: event.banner_url,
+          event_venue_name: event.venue_name,
+          event_address: event.address,
+          event_start_time: event.start_time,
+          event_end_time: event.end_time,
+          event_source_url: event.source_url,
+          registration_status: "saved",
+        };
+        const updatedRsvps = [newPass, ...storedRsvps];
+        localStorage.setItem("eventdek_rsvps", JSON.stringify(updatedRsvps));
+
+        // 5. Update header ticket badge count
+        window.dispatchEvent(
+          new CustomEvent("eventdek:rsvp", { detail: updatedRsvps.length }),
+        );
+
+        // 6. Launch the site after the swipe transition completes
+        setTimeout(() => {
+          if (event.source_url) {
+            window.open(event.source_url, "_blank", "noopener,noreferrer");
+          }
+        }, 120);
+      },
+    });
   };
 
   const handleDragEnd = (
@@ -510,7 +560,7 @@ export default function Home() {
     } else if (info.offset.x < -SWIPE_THRESHOLD) {
       handlePass(top);
     } else {
-      x.set(0);
+      animate(x, 0, { type: "spring", stiffness: 400, damping: 28 });
     }
   };
 
@@ -528,19 +578,15 @@ export default function Home() {
       <AmbientBackground />
       <AppHeader />
 
-      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pt-4 pb-8 sm:pb-12">
+      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pt-3 pb-8 sm:pb-12">
         <div className="mb-3 flex w-full max-w-[340px] items-center justify-between gap-2 sm:max-w-[390px]">
-          {/* <div className="relative flex items-center group">
-            <div className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-card/80 py-1.5 pl-3 pr-2.5 shadow-sm backdrop-blur-md transition-all group-hover:border-going/40">
-              <span className="size-1.5 rounded-full bg-going animate-pulse" />
-              <span className="font-mono text-[10px] uppercase text-muted-foreground tracking-wider">
-                Region:
-              </span>
-
+          <div className="relative flex items-center">
+            <div className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-card/80 py-1.5 pl-2.5 pr-2 shadow-sm backdrop-blur-md transition-all hover:border-going/40">
+              <MapPin className="size-3.5 text-going shrink-0" />
               <select
                 value={stateId}
                 onChange={(e) => setStateId(e.target.value)}
-                className="cursor-pointer appearance-none bg-transparent pr-4 font-sans text-xs font-bold text-foreground outline-none transition-colors hover:text-going focus:outline-none"
+                className="cursor-pointer appearance-none bg-transparent pr-4 font-sans text-xs font-semibold text-foreground outline-none transition-colors hover:text-going focus:outline-none"
               >
                 {NG_STATES.map((s) => (
                   <option
@@ -552,24 +598,40 @@ export default function Home() {
                   </option>
                 ))}
               </select>
-
-              <ChevronDown className="pointer-events-none absolute right-2.5 size-3 text-muted-foreground transition-transform group-hover:text-foreground" />
+              <ChevronDown className="pointer-events-none absolute right-2 size-3 text-muted-foreground" />
             </div>
-          </div> */}
-
-          <div className="flex items-center">
-            {isLoadingEvents && (
-              <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-card/60 px-2.5 py-1 font-mono text-[10px] text-muted-foreground backdrop-blur-md">
-                <Loader2 className="size-3.5 animate-spin text-going" /> Loading
-                events...
-              </span>
-            )}
-            {fetchError && !isLoadingEvents && (
-              <span className="rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-[10px] font-medium text-destructive backdrop-blur-sm">
-                Error
-              </span>
-            )}
           </div>
+
+          <div className="inline-flex rounded-xl border border-white/10 bg-card/80 p-0.5 shadow-sm backdrop-blur-md">
+            {(["all", "free", "paid"] as const).map((tier) => (
+              <button
+                key={tier}
+                type="button"
+                onClick={() => setPricingFilter(tier)}
+                className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold capitalize transition-all ${
+                  pricingFilter === tier
+                    ? "bg-going text-going-foreground font-bold shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-surface-2/60"
+                }`}
+              >
+                {tier}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-2 flex h-4 items-center justify-center">
+          {isLoadingEvents && (
+            <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-card/60 px-2.5 py-0.5 font-mono text-[10px] text-muted-foreground backdrop-blur-md">
+              <Loader2 className="size-3 animate-spin text-going" /> Loading
+              events...
+            </span>
+          )}
+          {fetchError && !isLoadingEvents && (
+            <span className="rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-[10px] font-medium text-destructive backdrop-blur-sm">
+              {fetchError}
+            </span>
+          )}
         </div>
 
         <div className="relative aspect-[16/23] w-full max-w-[340px] sm:max-w-[390px]">
@@ -579,22 +641,35 @@ export default function Home() {
                 <Sparkles className="size-6 text-going" />
               </span>
               <h2 className="mt-4 font-display text-xl font-bold tracking-tight">
-                End of the deck
+                No matching events
               </h2>
               <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
-                You've viewed all upcoming events in{" "}
+                None found for{" "}
                 <strong className="text-foreground">
                   {stateName(stateId)}
+                </strong>{" "}
+                with filter{" "}
+                <strong className="text-going uppercase">
+                  {pricingFilter}
                 </strong>
                 .
               </p>
 
               <div className="mt-6 flex flex-wrap justify-center gap-2">
+                {pricingFilter !== "all" && (
+                  <button
+                    type="button"
+                    onClick={() => setPricingFilter("all")}
+                    className="tactile flex items-center gap-1.5 rounded-xl bg-going px-4 py-2.5 text-xs font-bold text-going-foreground shadow-md"
+                  >
+                    <Filter className="size-3.5" /> Clear Filter
+                  </button>
+                )}
                 {stateId !== "virtual" && (
                   <button
                     type="button"
                     onClick={() => setStateId("virtual")}
-                    className="tactile flex items-center gap-1.5 rounded-xl bg-going px-4 py-2.5 text-xs font-bold text-going-foreground shadow-md"
+                    className="tactile flex items-center gap-1.5 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-surface-2"
                   >
                     <Globe2 className="size-3.5" /> Virtual Events
                   </button>
@@ -604,7 +679,7 @@ export default function Home() {
                   onClick={fetchDeckEvents}
                   className="tactile flex items-center gap-1.5 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-surface-2"
                 >
-                  <RotateCcw className="size-3.5" /> Refresh Deck
+                  <RotateCcw className="size-3.5" /> Refresh
                 </button>
               </div>
             </div>
@@ -638,7 +713,7 @@ export default function Home() {
                 style={{ opacity: rsvpOpacity }}
                 className="pointer-events-none absolute top-5 left-5 z-20 rounded-lg border-2 border-going bg-going/20 px-3.5 py-1 text-xs font-black uppercase tracking-wider text-going backdrop-blur-md"
               >
-                GOING
+                REGISTER
               </motion.div>
             </motion.div>
           )}
@@ -680,7 +755,7 @@ export default function Home() {
               type="button"
               onClick={() => handleRsvp(top)}
               className="tactile grid size-13 place-items-center rounded-2xl bg-going text-going-foreground shadow-lg hover:scale-105 active:scale-95 transition-all"
-              title="RSVP (Swipe Right)"
+              title="Register (Swipe Right)"
             >
               <Check className="size-6 stroke-[3]" />
             </button>
@@ -700,18 +775,6 @@ export default function Home() {
             setDetails(null);
           }}
         />
-
-        {checkout && (
-          <RsvpFlow
-            event={checkout}
-            open={Boolean(checkout)}
-            onClose={() => setCheckout(null)}
-            onSuccess={(eventId) => {
-              setDeck((prev) => prev.filter((e) => e.id !== eventId));
-              setCheckout(null);
-            }}
-          />
-        )}
       </main>
     </div>
   );

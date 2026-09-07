@@ -393,6 +393,112 @@ def parse_native_price(raw_text: str) -> Tuple[bool, float, str]:
     return False, round(val, 2), currency
 
 
+# def parse_raw_card(
+#     raw_html: str,
+#     extracted_price_text: str = "",
+#     custom_questions: Optional[List[Dict[str, Any]]] = None,
+# ) -> Optional[dict]:
+#     soup = BeautifulSoup(raw_html, "html.parser")
+
+#     # 1. Event Link & Title
+#     link_tag = soup.find("a", href=re.compile(r"/e/"))
+#     if not isinstance(link_tag, Tag):
+#         return None
+
+#     raw_href = link_tag.get("href", "")
+#     href_str = raw_href if isinstance(raw_href, str) else ""
+#     href = href_str.split("?")[0]
+#     if href.startswith("/"):
+#         href = f"https://www.eventbrite.com{href}"
+
+#     title_tag = soup.find(["h2", "h3", "h4", "strong"])
+#     title = title_tag.get_text(strip=True) if isinstance(title_tag, Tag) else link_tag.get_text(strip=True)
+#     if not title or len(title) < 3:
+#         return None
+
+#     # 2. Extract Price String
+#     price_str = extracted_price_text.strip()
+
+#     if not price_str:
+#         for tag in soup.find_all(["p", "span", "div"]):
+#             text = tag.get_text(strip=True)
+#             if any(sym in text for sym in ["$", "₦", "€", "£"]) and not any(
+#                 d in text.lower() for d in ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+#             ):
+#                 price_str = text
+#                 break
+
+#     # 3. Extract Metadata Lines
+#     lines = [
+#         s.get_text(strip=True)
+#         for s in soup.find_all(["p", "span", "div"])
+#         if isinstance(s, Tag) and s.get_text(strip=True) and s.get_text(strip=True) != title
+#     ]
+#     clean_lines = list(dict.fromkeys(lines))
+
+#     date_str = ""
+#     venue_str = ""
+#     date_pattern = re.compile(
+#         r"(Mon|Tue|Wed|Thu|Fri|Sat|Sun|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|\b\d{1,2}:\d{2}\b)",
+#         re.IGNORECASE,
+#     )
+#     skip_badges = {"sales end soon", "sold out", "almost full", "going fast"}
+
+#     for line in clean_lines:
+#         line_lower = line.lower()
+#         if line_lower in skip_badges:
+#             continue
+
+#         if not price_str and any(c in line for c in ["$", "₦", "€", "£", "From", "from"]):
+#             price_str = line
+#             continue
+
+#         if date_pattern.search(line) and not date_str:
+#             date_str = line
+#             continue
+
+#         if not venue_str and len(line) > 3 and not date_pattern.search(line) and line != price_str:
+#             venue_str = line
+
+#     if not venue_str:
+#         venue_str = "Lagos, Nigeria" if "lagos" in title.lower() else "Nigeria / Online"
+
+#     is_free, price_val, currency = parse_native_price(price_str)
+#     start_time, end_time = parse_event_datetimes(date_str)
+
+#     img_tag = soup.find("img")
+#     img_url = "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800"
+#     if isinstance(img_tag, Tag):
+#         raw_src = img_tag.get("src")
+#         if isinstance(raw_src, str) and raw_src.startswith("http"):
+#             img_url = raw_src
+
+#     full_loc = f"{title} {venue_str}"
+#     state_id = resolve_state_id(full_loc)
+#     category = "tech" if any(k in title.lower() for k in ["tech", "ai", "dev", "data", "code", "design", "product"]) else "lifestyle"
+
+#     questions = custom_questions or []
+#     requires_custom = len(questions) > 0
+
+#     return {
+#         "title": title,
+#         "description": f"{title} live at {venue_str}. Date: {date_str or 'Upcoming'}.",
+#         "banner_url": img_url,
+#         "venue_name": venue_str,
+#         "address": f"{venue_str}, Nigeria" if "nigeria" not in venue_str.lower() else venue_str,
+#         "state_id": state_id,
+#         "start_time": start_time,
+#         "end_time": end_time,
+#         "category": category,
+#         "is_free": is_free,
+#         "price_ngn": price_val,
+#         "currency": currency,
+#         "source_platform": "eventbrite",
+#         "source_url": href,
+#         "requires_custom_fields": requires_custom,
+#         "custom_fields_schema": questions,
+#     }
+
 def parse_raw_card(
     raw_html: str,
     extracted_price_text: str = "",
@@ -418,7 +524,6 @@ def parse_raw_card(
 
     # 2. Extract Price String
     price_str = extracted_price_text.strip()
-
     if not price_str:
         for tag in soup.find_all(["p", "span", "div"]):
             text = tag.get_text(strip=True)
@@ -428,7 +533,7 @@ def parse_raw_card(
                 price_str = text
                 break
 
-    # 3. Extract Metadata Lines
+    # 3. Extract Metadata Lines & Exclude Junk Badges
     lines = [
         s.get_text(strip=True)
         for s in soup.find_all(["p", "span", "div"])
@@ -436,29 +541,41 @@ def parse_raw_card(
     ]
     clean_lines = list(dict.fromkeys(lines))
 
+    # Eventbrite junk strings to discard
+    junk_patterns = re.compile(
+        r"(sales end soon|sold out|almost full|going fast|followers|save this event|share this event|by |view \d+)",
+        re.IGNORECASE,
+    )
+
     date_str = ""
     venue_str = ""
     date_pattern = re.compile(
         r"(Mon|Tue|Wed|Thu|Fri|Sat|Sun|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|\b\d{1,2}:\d{2}\b)",
         re.IGNORECASE,
     )
-    skip_badges = {"sales end soon", "sold out", "almost full", "going fast"}
 
     for line in clean_lines:
-        line_lower = line.lower()
-        if line_lower in skip_badges:
+        line_clean = line.strip()
+        
+        # Skip garbage text lines
+        if junk_patterns.search(line_clean) or line_clean.lower() == title.lower():
             continue
 
-        if not price_str and any(c in line for c in ["$", "₦", "€", "£", "From", "from"]):
-            price_str = line
+        if not price_str and any(c in line_clean for c in ["$", "₦", "€", "£", "From", "from"]):
+            price_str = line_clean
             continue
 
-        if date_pattern.search(line) and not date_str:
-            date_str = line
+        # Match clean date line
+        if date_pattern.search(line_clean) and not date_str:
+            # If the date line mistakenly starts with the title, strip it
+            clean_date = re.sub(re.escape(title), "", line_clean, flags=re.IGNORECASE).strip()
+            date_str = clean_date
             continue
 
-        if not venue_str and len(line) > 3 and not date_pattern.search(line) and line != price_str:
-            venue_str = line
+        # Match clean venue line
+        if not venue_str and len(line_clean) > 3 and not date_pattern.search(line_clean) and line_clean != price_str:
+            clean_venue = re.sub(re.escape(title), "", line_clean, flags=re.IGNORECASE).strip()
+            venue_str = clean_venue
 
     if not venue_str:
         venue_str = "Lagos, Nigeria" if "lagos" in title.lower() else "Nigeria / Online"
@@ -475,14 +592,23 @@ def parse_raw_card(
 
     full_loc = f"{title} {venue_str}"
     state_id = resolve_state_id(full_loc)
-    category = "tech" if any(k in title.lower() for k in ["tech", "ai", "dev", "data", "code", "design", "product"]) else "lifestyle"
+    category = "tech" if any(k in title.lower() for k in ["tech", "ai", "dev", "data", "code", "design", "product", "payment", "commerce"]) else "lifestyle"
 
     questions = custom_questions or []
     requires_custom = len(questions) > 0
 
+    # Build a clean, readable editorial description without raw scraped concatenation
+    formatted_date = start_time.strftime("%A, %B %d, %Y at %I:%M %p")
+    clean_description = (
+        f"Join us for {title}, taking place at {venue_str}.\n\n"
+        f"Scheduled for {formatted_date}. "
+        f"Admission is {'Free' if is_free else f'{currency} {price_val:,.2f}'}. "
+        f"Check the official registration link for full schedule, speaker line-ups, and attendee guidelines."
+    )
+
     return {
         "title": title,
-        "description": f"{title} live at {venue_str}. Date: {date_str or 'Upcoming'}.",
+        "description": clean_description,
         "banner_url": img_url,
         "venue_name": venue_str,
         "address": f"{venue_str}, Nigeria" if "nigeria" not in venue_str.lower() else venue_str,
@@ -498,8 +624,7 @@ def parse_raw_card(
         "requires_custom_fields": requires_custom,
         "custom_fields_schema": questions,
     }
-
-
+    
 async def run_event_scraper_job():
     print("\n🚀 [START] Ingesting Events...")
     total_saved = 0

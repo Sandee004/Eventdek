@@ -267,3 +267,23 @@ async def get_my_dek(
         })
 
     return passes
+
+
+@router.get("/{event_id}", response_model=EventResponse)
+async def get_single_event(
+    event_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Public lookup for a single event by ID (used for shared links).
+    """
+    result = await db.execute(select(Event).where(Event.id == event_id))
+    event = result.scalars().first()
+
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found",
+        )
+
+    return event

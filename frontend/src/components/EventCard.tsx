@@ -1,4 +1,5 @@
-import { Clock, Info, MapPin, Globe } from "lucide-react";
+import { Clock, Info, MapPin, Globe, Share2 } from "lucide-react";
+import { shareEvent } from "../lib/share";
 
 export interface EventItem {
   id: string;
@@ -139,17 +140,36 @@ export default function EventCard({
             <span className="numeric text-[11px] text-muted-foreground">
               {fullDate(event.start_time)} · {clockTime(event.start_time)}
             </span>
-            {interactive && onExpand && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onExpand();
-                }}
-                className="tactile flex items-center gap-1 rounded bg-surface-2 px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-accent transition-colors"
-              >
-                <Info className="size-3" /> Info
-              </button>
+
+            {interactive && (
+              <div className="flex items-center gap-1.5">
+                {/* Share Button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    shareEvent(event);
+                  }}
+                  className="tactile flex size-7 items-center justify-center rounded-md bg-surface-2 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  title="Share event link"
+                >
+                  <Share2 className="size-3" />
+                </button>
+
+                {/* Info / Expand Button */}
+                {onExpand && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onExpand();
+                    }}
+                    className="tactile flex items-center gap-1 rounded-md bg-surface-2 px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-accent transition-colors"
+                  >
+                    <Info className="size-3" /> Info
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>

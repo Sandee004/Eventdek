@@ -12,8 +12,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { NG_STATES } from "../lib/constants";
-import { AmbientBackground } from "./AmbientBg";
-import { AppHeader } from "./AppHeader";
+import { AmbientBackground } from "../components/AmbientBg";
+import { AppHeader } from "../components/AppHeader";
 
 export default function Profile() {
   // Read current session directly

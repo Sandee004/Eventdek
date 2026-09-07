@@ -12,24 +12,24 @@ import { Compass, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { Toaster } from "./components/ui/sonner";
 
-import LandingPage from "./components/LandingPage";
-import Login from "./components/Login";
-import Onboarding from "./components/Onboarding";
-import Home from "./components/Homepage";
-import { MyDek } from "./components/RegisteredEvents";
-import Profile from "./components/Profile";
+import LandingPage from "./pages/LandingPage";
+import Login from "./pages/Login";
+import Onboarding from "./pages/Onboarding";
+import Home from "./pages/Homepage";
+import { MyDek } from "./pages/RegisteredEvents";
+import Profile from "./pages/Profile";
 import { InstallPrompt } from "./components/InstallPrompt";
+import { PublicEventView } from "./pages/PublicEventView";
+import { AmbientBackground } from "./components/AmbientBg";
 
 const queryClient = new QueryClient();
 
-// Helper to check authentication state[cite: 1, 3]
 function isAuthenticated(): boolean {
   const token = localStorage.getItem("eventdek_token");
   const user = localStorage.getItem("eventdek_user");
   return Boolean(token && user);
 }
 
-// Redirects unauthenticated visitors to /login[cite: 1, 3]
 function ProtectedRoute() {
   const location = useLocation();
 
@@ -56,24 +56,11 @@ function NotFound() {
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-4 py-12">
       {/* Blueprint Grid Ambient Background */}
-      <div
-        className="pointer-events-none absolute inset-0 -z-10 opacity-25"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, color-mix(in oklab, var(--color-foreground) 10%, transparent) 1px, transparent 1px),
-            linear-gradient(to bottom, color-mix(in oklab, var(--color-foreground) 10%, transparent) 1px, transparent 1px)
-          `,
-          backgroundSize: "44px 44px",
-          maskImage:
-            "radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, transparent 100%)",
-          WebkitMaskImage:
-            "radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, transparent 100%)",
-        }}
-      />
+      <AmbientBackground />
 
       {/* Atmospheric Blur Glows */}
-      <div className="pointer-events-none absolute -top-24 -left-24 size-96 rounded-full bg-going/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -right-24 size-96 rounded-full bg-pass/5 blur-3xl" />
+      {/* <div className="pointer-events-none absolute -top-24 -left-24 size-96 rounded-full bg-going/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 -right-24 size-96 rounded-full bg-pass/5 blur-3xl" /> */}
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}
@@ -126,6 +113,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
+          <Route path="/events/:id" element={<PublicEventView />} />
           {/* Guest / Public-Only Pages */}
           <Route element={<PublicOnlyRoute />}>
             <Route path="/" element={<LandingPage />} />

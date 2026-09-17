@@ -9,7 +9,7 @@ import {
 } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Compass, ArrowLeft } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { Toaster } from "./components/ui/sonner";
 
 import LandingPage from "./pages/LandingPage";
@@ -21,6 +21,7 @@ import Profile from "./pages/Profile";
 import { InstallPrompt } from "./components/InstallPrompt";
 import { PublicEventView } from "./pages/PublicEventView";
 import { AmbientBackground } from "./components/AmbientBg";
+import { ScreenGuard } from "./components/ScreenGuard";
 
 const queryClient = new QueryClient();
 
@@ -55,24 +56,19 @@ function NotFound() {
 
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-4 py-12">
-      {/* Blueprint Grid Ambient Background */}
       <AmbientBackground />
-
-      {/* Atmospheric Blur Glows */}
-      {/* <div className="pointer-events-none absolute -top-24 -left-24 size-96 rounded-full bg-going/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -right-24 size-96 rounded-full bg-pass/5 blur-3xl" /> */}
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="card-frame relative w-full max-w-md rounded-2xl border border-border bg-card/95 p-8 text-center shadow-2xl backdrop-blur-sm"
+        className="card-frame relative w-full max-w-md rounded-2xl border border-border bg-card/95 p-8 text-center shadow-md backdrop-blur-sm"
       >
         <div className="mx-auto grid size-16 place-items-center rounded-2xl border border-border bg-surface-2 text-going shadow-inner">
           <Compass className="size-8" />
         </div>
 
-        <span className="mt-5 inline-block font-mono text-xs font-bold uppercase tracking-widest text-going">
+        <span className="mt-5 inline-block label-caps text-going">
           Error 404
         </span>
 
@@ -133,6 +129,7 @@ export default function App() {
         </Routes>
 
         <InstallPrompt />
+        <ScreenGuard />
         <Toaster position="top-center" />
       </BrowserRouter>
     </QueryClientProvider>

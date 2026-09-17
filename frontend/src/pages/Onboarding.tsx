@@ -12,7 +12,7 @@ import {
   Sparkles,
   Ticket,
 } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { API_BASE_URL, NG_STATES } from "../lib/constants";
 import { AmbientBackground } from "../components/AmbientBg";
 
@@ -120,29 +120,11 @@ export default function Onboarding() {
     <div>
       <AmbientBackground />
       <div className="relative flex min-h-[calc(100vh-4rem)] w-full items-center justify-center overflow-hidden px-4 py-12">
-        <div
-          className="pointer-events-none absolute inset-0 -z-10 opacity-25"
-          style={{
-            backgroundImage: `
-            linear-gradient(to right, color-mix(in oklab, var(--color-foreground) 10%, transparent) 1px, transparent 1px),
-            linear-gradient(to bottom, color-mix(in oklab, var(--color-foreground) 10%, transparent) 1px, transparent 1px)
-          `,
-            backgroundSize: "44px 44px",
-            maskImage:
-              "radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, transparent 100%)",
-            WebkitMaskImage:
-              "radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, transparent 100%)",
-          }}
-        />
-
-        <div className="pointer-events-none absolute -top-24 -left-24 size-96 rounded-full bg-going/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -right-24 size-96 rounded-full bg-pass/5 blur-3xl" />
-
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="card-frame relative w-full max-w-lg rounded-2xl p-6 sm:p-8 bg-card/95 backdrop-blur-sm border border-border shadow-2xl"
+          className="card-frame relative w-full max-w-lg rounded-2xl p-6 sm:p-8 bg-card/95 backdrop-blur-sm border border-border shadow-md"
         >
           <div className="absolute top-3 right-3 flex gap-1">
             <span className="size-1.5 rounded-full bg-going/60" />
@@ -215,7 +197,7 @@ export default function Onboarding() {
                       <span className="label-caps text-muted-foreground">
                         Full Name *
                       </span>
-                      <span className="text-[11px] font-mono text-muted-foreground">
+                      <span className="text-[11px] text-muted-foreground">
                         First & last name
                       </span>
                     </div>
@@ -252,7 +234,7 @@ export default function Onboarding() {
                       <span className="label-caps text-muted-foreground">
                         Create Password *
                       </span>
-                      <span className="text-[11px] font-mono text-muted-foreground">
+                      <span className="text-[11px] text-muted-foreground">
                         Min 8 chars
                       </span>
                     </div>

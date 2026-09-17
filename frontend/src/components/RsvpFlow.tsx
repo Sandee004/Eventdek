@@ -279,7 +279,7 @@ export default function RsvpFlow({
     step === "done"
       ? "You're on the list"
       : isPaid
-        ? "Secure checkout · Paystack"
+        ? "Secure checkout with Paystack"
         : questions.length > 0
           ? "Organizer Questions"
           : "Instant RSVP";
@@ -316,7 +316,7 @@ export default function RsvpFlow({
             }}
             className="tactile w-full rounded-md bg-going py-3 text-sm font-bold text-going-foreground"
           >
-            Confirm payment · {naira(total)}
+            Confirm payment of {naira(total)}
           </button>
         ) : step === "done" ? (
           <button
@@ -437,7 +437,7 @@ export default function RsvpFlow({
                 {isPaid ? "Payment confirmed" : "RSVP confirmed"}
               </p>
               <p className="truncate text-xs text-muted-foreground">
-                Ref {ticket.reference} · {relativeDay(event.start_time)},{" "}
+                Ref {ticket.reference} — {relativeDay(event.start_time)},{" "}
                 {clockTime(event.start_time)}
               </p>
             </div>

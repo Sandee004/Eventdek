@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Eye, EyeOff, KeyRound, Loader2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { API_BASE_URL } from "../lib/constants";
 import { AmbientBackground } from "../components/AmbientBg";
 
@@ -69,29 +69,11 @@ export default function Login() {
     <div>
       <AmbientBackground />
       <div className="relative flex min-h-[calc(100vh-4rem)] w-full items-center justify-center overflow-hidden px-4 py-12">
-        <div
-          className="pointer-events-none absolute inset-0 -z-10 opacity-25"
-          style={{
-            backgroundImage: `
-            linear-gradient(to right, color-mix(in oklab, var(--color-foreground) 10%, transparent) 1px, transparent 1px),
-            linear-gradient(to bottom, color-mix(in oklab, var(--color-foreground) 10%, transparent) 1px, transparent 1px)
-          `,
-            backgroundSize: "44px 44px",
-            maskImage:
-              "radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, transparent 100%)",
-            WebkitMaskImage:
-              "radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, transparent 100%)",
-          }}
-        />
-
-        <div className="pointer-events-none absolute -top-24 -left-24 size-96 rounded-full bg-going/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -right-24 size-96 rounded-full bg-pass/5 blur-3xl" />
-
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="card-frame relative w-full max-w-md rounded-2xl p-6 sm:p-8 bg-card/95 backdrop-blur-sm border border-border shadow-2xl"
+          className="card-frame relative w-full max-w-md rounded-2xl p-6 sm:p-8 bg-card/95 backdrop-blur-sm border border-border shadow-md"
         >
           <div className="flex items-center gap-3.5 pb-2">
             <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-surface-2 border border-border text-going">
@@ -182,7 +164,7 @@ export default function Login() {
             Don't have an event pass yet?{" "}
             <button
               type="button"
-              onClick={() => navigate("/onboarding")}
+              onClick={() => navigate("/register")}
               className="font-bold text-going hover:underline"
             >
               Sign Up / Claim Pass

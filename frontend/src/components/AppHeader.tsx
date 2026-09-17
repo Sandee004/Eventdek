@@ -138,7 +138,7 @@ export function AppHeader() {
               <span className="hidden sm:inline">Passes</span>
               {passCount > 0 && (
                 <span
-                  className={`grid size-4 place-items-center rounded-full text-[9px] font-mono font-black transition-transform ${
+                  className={`grid size-4 place-items-center rounded-full text-[9px] font-black transition-transform ${
                     isPasses
                       ? "bg-going-foreground text-going"
                       : "bg-going text-going-foreground scale-105"
@@ -172,7 +172,7 @@ export function AppHeader() {
                 className="tactile hidden md:flex items-center gap-2 rounded-xl border border-border/70 bg-surface-2/40 py-1 pl-2 pr-2.5 hover:border-going/50 transition-colors"
                 title="View Profile"
               >
-                <span className="grid size-6 place-items-center rounded-lg bg-surface font-mono text-[11px] font-bold text-going border border-border">
+                <span className="grid size-6 place-items-center rounded-lg bg-surface text-[11px] font-bold text-going border border-border">
                   {profile.name?.slice(0, 1).toUpperCase() || "U"}
                 </span>
                 <span className="max-w-[70px] truncate text-xs font-medium text-muted-foreground">

@@ -10,7 +10,7 @@ import {
   QrCode,
   X,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { AmbientBackground } from "../components/AmbientBg";
 
 export default function LandingPage() {
@@ -32,9 +32,9 @@ export default function LandingPage() {
               <span className="font-display text-xl font-bold tracking-tight">
                 EventDek<span className="text-going">.</span>
               </span>
-              <span className="hidden items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-0.5 text-[11px] font-mono text-muted-foreground sm:inline-flex">
+              <span className="hidden items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-0.5 text-[11px] text-muted-foreground sm:inline-flex">
                 <span className="size-1.5 rounded-full bg-going animate-pulse" />
-                NG 36 STATES + FCT
+36 states + FCT
               </span>
             </div>
 
@@ -86,7 +86,7 @@ export default function LandingPage() {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
                   <button
                     onClick={() => navigate("/register")}
-                    className="tactile flex items-center justify-center gap-2.5 rounded-xl bg-going px-7 py-4 text-sm font-bold text-going-foreground shadow-xl hover:opacity-95"
+                    className="tactile flex items-center justify-center gap-2.5 rounded-xl bg-going px-7 py-4 text-sm font-bold text-going-foreground shadow-sm hover:opacity-95"
                   >
                     Start Exploring Events <ArrowRight className="size-4" />
                   </button>
@@ -185,7 +185,7 @@ export default function LandingPage() {
                         FREE RSVP
                       </span>
 
-                      <span className="absolute bottom-3 right-3 rounded-md border border-border bg-surface/90 px-2 py-0.5 text-[11px] font-mono text-foreground backdrop-blur-sm">
+                      <span className="absolute bottom-3 right-3 rounded-md border border-border bg-surface/90 px-2 py-0.5 text-[11px] text-foreground backdrop-blur-sm">
                         Landmark, VI
                       </span>
                     </div>
@@ -198,7 +198,7 @@ export default function LandingPage() {
                           TECH & PRODUCT
                         </span>
                         <span className="numeric text-[11px]">
-                          TOMORROW • 4:00 PM
+                          Tomorrow at 4:00 PM
                         </span>
                       </div>
 
@@ -219,7 +219,7 @@ export default function LandingPage() {
                             Lagos Innovates
                           </strong>
                         </span>
-                        <span className="font-mono text-xs text-going font-semibold">
+                        <span className="text-xs text-going font-semibold">
                           184 Saved Pass
                         </span>
                       </div>
@@ -236,8 +236,8 @@ export default function LandingPage() {
                         <X className="size-5" />
                       </button>
 
-                      <span className="text-[11px] font-mono text-muted-foreground uppercase">
-                        Hover to preview gesture
+                      <span className="text-[11px] text-muted-foreground">
+                        Hover to preview the gesture
                       </span>
 
                       <button
@@ -261,12 +261,11 @@ export default function LandingPage() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10">
               <div>
-                <span className="label-caps text-going">Hyper-Local Pools</span>
-                <h2 className="font-display text-2xl sm:text-3xl font-bold mt-1">
+                <h2 className="font-display text-2xl sm:text-3xl font-bold">
                   Active hubs across Nigeria
                 </h2>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-2 sm:mt-0 font-mono">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-2 sm:mt-0">
                 Switch regions anytime in 1 click
               </p>
             </div>
@@ -320,7 +319,7 @@ export default function LandingPage() {
                   <p className="text-xs text-muted-foreground truncate">
                     {region.area}
                   </p>
-                  <span className="mt-2 block font-mono text-[10px] text-going font-medium">
+                  <span className="mt-2 block text-[10px] text-going font-medium">
                     {region.count}
                   </span>
                 </div>
@@ -332,8 +331,7 @@ export default function LandingPage() {
         <section id="how-it-works" className="py-20 border-b border-border">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-2xl mx-auto mb-16">
-              <span className="label-caps text-going">The Discovery Loop</span>
-              <h2 className="font-display text-3xl sm:text-4xl font-bold mt-2">
+              <h2 className="font-display text-3xl sm:text-4xl font-bold">
                 Designed for zero cognitive load
               </h2>
               <p className="text-sm text-muted-foreground mt-3">
@@ -343,7 +341,7 @@ export default function LandingPage() {
 
             <div className="grid gap-8 md:grid-cols-3">
               <div className="card-frame rounded-2xl p-6 space-y-4">
-                <div className="grid size-12 place-items-center rounded-xl bg-surface-2 text-going border border-border font-mono text-base font-bold">
+                <div className="grid size-12 place-items-center rounded-xl bg-surface-2 text-going border border-border text-base font-bold">
                   01
                 </div>
                 <h3 className="font-display text-lg font-bold">
@@ -356,7 +354,7 @@ export default function LandingPage() {
               </div>
 
               <div className="card-frame rounded-2xl p-6 space-y-4 border-going/30">
-                <div className="grid size-12 place-items-center rounded-xl bg-going text-going-foreground font-mono text-base font-bold">
+                <div className="grid size-12 place-items-center rounded-xl bg-going text-going-foreground text-base font-bold">
                   02
                 </div>
                 <h3 className="font-display text-lg font-bold">
@@ -369,7 +367,7 @@ export default function LandingPage() {
               </div>
 
               <div className="card-frame rounded-2xl p-6 space-y-4">
-                <div className="grid size-12 place-items-center rounded-xl bg-surface-2 text-going border border-border font-mono text-base font-bold">
+                <div className="grid size-12 place-items-center rounded-xl bg-surface-2 text-going border border-border text-base font-bold">
                   03
                 </div>
                 <h3 className="font-display text-lg font-bold">
@@ -389,7 +387,6 @@ export default function LandingPage() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
               <div className="space-y-6">
-                <span className="label-caps text-going">Built for Speed</span>
                 <h2 className="font-display text-3xl sm:text-4xl font-bold leading-tight">
                   Never lose track of an ecosystem event again.
                 </h2>
@@ -439,18 +436,18 @@ export default function LandingPage() {
                       Unwind Lagos: Design Systems Summit
                     </p>
                   </div>
-                  <span className="rounded-full bg-going/20 border border-going/40 px-2.5 py-1 text-[10px] font-mono text-going font-bold">
+                  <span className="rounded-full bg-going/20 border border-going/40 px-2.5 py-1 text-[10px] text-going font-bold">
                     SAVED PASS
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+                <div className="grid grid-cols-2 gap-4 text-xs">
                   <div>
                     <span className="text-muted-foreground block text-[10px]">
                       DATE & VENUE
                     </span>
                     <span className="text-foreground">
-                      Saturday, 22 Aug • The Zone, Gbagada
+                      Saturday, 22 Aug at The Zone, Gbagada
                     </span>
                   </div>
                   <div>
@@ -469,7 +466,7 @@ export default function LandingPage() {
                       <QrCode className="size-14" />
                     </div>
                     <div>
-                      <span className="font-mono text-[10px] text-muted-foreground block">
+                      <span className="text-[10px] text-muted-foreground block">
                         DEK-PASS #8921-NG
                       </span>
                       <span className="text-xs font-semibold text-foreground">
@@ -504,7 +501,7 @@ export default function LandingPage() {
             <div className="pt-2">
               <button
                 onClick={() => navigate("/register")}
-                className="tactile inline-flex items-center justify-center gap-2 rounded-xl bg-going px-8 py-4 text-sm font-bold text-going-foreground shadow-2xl hover:opacity-95"
+                className="tactile inline-flex items-center justify-center gap-2 rounded-xl bg-going px-8 py-4 text-sm font-bold text-going-foreground shadow-md hover:opacity-95"
               >
                 Explore events now <ArrowRight className="size-4" />
               </button>
@@ -517,7 +514,7 @@ export default function LandingPage() {
                 </span>
                 <span>— Open Source Nigerian Event Engine</span>
               </div>
-              <p className="font-mono text-[11px]">
+              <p className="text-[11px]">
                 Built for builders, creators, and founders across Nigeria.
               </p>
             </div>

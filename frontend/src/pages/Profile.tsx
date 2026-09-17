@@ -73,16 +73,14 @@ export default function Profile() {
       {/* 3. Main Profile Content Area */}
       <main className="relative z-10 mx-auto max-w-5xl px-4 pt-6 pb-16 sm:px-6 sm:pt-8 space-y-6">
         {/* Header Banner & Identity Card */}
-        <div className="card-frame overflow-hidden rounded-2xl border border-border bg-card/90 shadow-xl backdrop-blur-sm">
+        <div className="card-frame overflow-hidden rounded-2xl border border-border bg-card/90 shadow-sm backdrop-blur-sm">
           {/* Subtle Decorative Gradient Top Strip */}
-          <div className="h-20 sm:h-24 w-full bg-gradient-to-r from-going/20 via-surface-2 to-going/10 border-b border-border relative overflow-hidden">
-            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#CEFF1A_1px,transparent_1px)] [background-size:16px_16px]" />
-          </div>
+          <div className="h-20 sm:h-24 w-full bg-gradient-to-r from-going/15 via-surface-2 to-surface border-b border-border" />
 
           {/* Profile Details Header */}
           <div className="px-5 pb-5 pt-0 relative flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-10 sm:-mt-12">
             <div className="flex items-end gap-3.5">
-              <div className="grid size-18 sm:size-20 place-items-center rounded-2xl border-2 border-border bg-surface-2 text-2xl font-bold font-display shadow-xl text-going shrink-0">
+              <div className="grid size-18 sm:size-20 place-items-center rounded-2xl border-2 border-border bg-surface-2 text-2xl font-bold font-display shadow-sm text-going shrink-0">
                 {form.name?.slice(0, 1).toUpperCase() || "U"}
               </div>
               <div className="mb-0.5 min-w-0">
@@ -90,12 +88,12 @@ export default function Profile() {
                   <h1 className="font-display text-lg sm:text-xl font-bold truncate">
                     {form.name}
                   </h1>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-going/15 px-2 py-0.5 text-[10px] font-bold text-going uppercase font-mono">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-going/15 px-2 py-0.5 text-[10px] font-bold text-going uppercase">
                     <ShieldCheck className="size-3" /> Active Pass
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground truncate">
-                  {form.email} · {form.role || "Attendee"}
+                  {form.email} — {form.role || "Attendee"}
                 </p>
               </div>
             </div>
@@ -103,13 +101,13 @@ export default function Profile() {
             {/* Quick Metrics Badge */}
             <div className="flex items-center gap-2 border-t sm:border-t-0 pt-3 sm:pt-0 border-border">
               <Link
-                to="/my-dek"
+                to="/registered-events"
                 className="tactile flex items-center gap-2.5 rounded-xl border border-border bg-surface-2/60 px-3.5 py-2 hover:bg-surface-2 transition-colors"
               >
                 <Ticket className="size-4 text-going" />
                 <div className="text-left">
-                  <p className="text-[9px] uppercase font-mono text-muted-foreground leading-none">
-                    Claimed Passes
+                  <p className="text-[10px] text-muted-foreground leading-none">
+                    Claimed passes
                   </p>
                   <p className="text-sm font-bold leading-tight">
                     {storedRsvps.length}
@@ -306,9 +304,9 @@ export default function Profile() {
           {/* Right Column: Host Studio & Device Security (5 Cols) */}
           <div className="lg:col-span-5 space-y-6">
             {/* Host Studio Preview Card */}
-            <div className="card-frame relative overflow-hidden rounded-2xl border-2 border-going/40 bg-gradient-to-b from-going/10 via-card/90 to-card p-5 sm:p-6 shadow-xl backdrop-blur-sm">
+            <div className="card-frame relative overflow-hidden rounded-2xl border-2 border-going/40 bg-gradient-to-b from-going/10 via-card/90 to-card p-5 sm:p-6 shadow-sm backdrop-blur-sm">
               <div className="absolute top-3.5 right-3.5">
-                <span className="rounded-full bg-going px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-going-foreground font-mono">
+                <span className="rounded-full bg-going px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-going-foreground">
                   Coming Soon
                 </span>
               </div>
@@ -373,7 +371,7 @@ export default function Profile() {
                 stay linked to this profile.
               </p>
               <div className="pt-1 flex items-center justify-between">
-                <span className="font-mono text-[10px] text-muted-foreground">
+                <span className="text-[10px] text-muted-foreground">
                   Build: v1.0-mvp
                 </span>
                 <button

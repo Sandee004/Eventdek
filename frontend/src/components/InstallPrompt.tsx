@@ -42,7 +42,7 @@ export function InstallPrompt() {
   return (
     <aside
       aria-label="Install EventDek"
-      className="fixed bottom-5 left-4 right-4 z-50 mx-auto max-w-sm rounded-2xl border border-border/80 bg-card/95 p-3.5 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-300"
+      className="fixed bottom-5 left-4 right-4 z-50 mx-auto max-w-sm rounded-2xl border border-border/80 bg-card/95 p-3.5 shadow-md backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-300"
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">

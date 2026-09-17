@@ -1,5 +1,6 @@
 import { Clock, Info, MapPin, Globe, Share2 } from "lucide-react";
 import { shareEvent } from "../lib/share";
+import { NG_STATES } from "../lib/constants";
 
 export interface EventItem {
   id: string;
@@ -19,6 +20,13 @@ export interface EventItem {
   source_url?: string | null;
   requires_custom_fields?: boolean;
   custom_fields_schema?: any[];
+}
+
+function formatState(id: string) {
+  return (
+    NG_STATES.find((s) => s.id.toLowerCase() === id.toLowerCase())?.name ||
+    id
+  );
 }
 
 function relativeDay(iso: string) {
@@ -124,8 +132,8 @@ export default function EventCard({
                 {event.source_platform || "Native Event"}
               </span>
             </span>
-            <span className="font-mono text-[11px] uppercase">
-              {event.state_id}
+            <span className="text-[11px] text-muted-foreground">
+              {formatState(event.state_id)}
             </span>
           </div>
 
@@ -138,7 +146,7 @@ export default function EventCard({
 
           <div className="flex items-center justify-between pt-1">
             <span className="numeric text-[11px] text-muted-foreground">
-              {fullDate(event.start_time)} · {clockTime(event.start_time)}
+              {fullDate(event.start_time)} at {clockTime(event.start_time)}
             </span>
 
             {interactive && (

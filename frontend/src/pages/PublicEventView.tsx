@@ -12,9 +12,16 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { AmbientBackground } from "../components/AmbientBg";
-import { API_BASE_URL } from "../lib/constants";
+import { API_BASE_URL, NG_STATES } from "../lib/constants";
 import { shareEvent } from "../lib/share";
 import type { EventItem } from "../components/EventCard";
+
+function formatState(id: string) {
+  return (
+    NG_STATES.find((s) => s.id.toLowerCase() === id.toLowerCase())?.name ||
+    id
+  );
+}
 
 export function PublicEventView() {
   const { id } = useParams<{ id: string }>();
@@ -42,7 +49,7 @@ export function PublicEventView() {
     return (
       <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden">
         <AmbientBackground />
-        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-card/60 px-4 py-2 font-mono text-xs text-muted-foreground backdrop-blur-md">
+        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-card/60 px-4 py-2 text-xs text-muted-foreground backdrop-blur-md">
           <Loader2 className="size-4 animate-spin text-going" /> Loading
           event...
         </div>
@@ -130,7 +137,7 @@ export function PublicEventView() {
       {/* 3. Main Full-Screen Layout */}
       <main className="relative z-10 mx-auto max-w-4xl px-4 pt-6 pb-20 sm:px-6 sm:pt-10">
         {/* Banner Hero Image */}
-        <div className="relative aspect-[21/9] sm:aspect-[16/7] w-full overflow-hidden rounded-3xl border border-white/10 shadow-2xl">
+        <div className="relative aspect-[21/9] sm:aspect-[16/7] w-full overflow-hidden rounded-3xl border border-white/10 shadow-md">
           <img
             src={
               event.banner_url ||
@@ -159,11 +166,11 @@ export function PublicEventView() {
         {/* Event Header Details */}
         <div className="mt-8 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-md border border-going/40 bg-going/15 px-2.5 py-0.5 text-[11px] font-mono font-bold uppercase text-going">
+            <span className="rounded-md border border-going/40 bg-going/15 px-2.5 py-0.5 text-[11px] font-bold capitalize text-going">
               {event.category}
             </span>
-            <span className="rounded-md border border-white/10 bg-surface-2/60 px-2 py-0.5 text-[11px] font-mono uppercase text-muted-foreground">
-              {event.state_id}
+            <span className="rounded-md border border-white/10 bg-surface-2/60 px-2 py-0.5 text-[11px] text-muted-foreground">
+              {formatState(event.state_id)}
             </span>
             <span className="text-xs text-muted-foreground capitalize flex items-center gap-1 ml-1">
               <Globe className="size-3 text-going" />
@@ -181,8 +188,8 @@ export function PublicEventView() {
           {/* Main Content Area */}
           <div className="lg:col-span-7 space-y-8">
             <div>
-              <h2 className="label-caps font-mono text-[11px] font-bold uppercase tracking-wider text-going">
-                About The Event
+              <h2 className="label-caps text-sm font-bold text-going">
+                About the event
               </h2>
               <div className="mt-3 text-sm leading-relaxed text-muted-foreground whitespace-pre-line space-y-4">
                 {event.description}
@@ -191,8 +198,8 @@ export function PublicEventView() {
 
             {/* Event Highlights & Features */}
             <div className="border-t border-white/10 pt-6">
-              <h3 className="label-caps font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                Access Perks
+              <h3 className="label-caps text-sm font-bold text-muted-foreground">
+                What's included
               </h3>
               <ul className="mt-3 grid gap-2.5 text-xs text-foreground">
                 <li className="flex items-center gap-2.5">
@@ -218,15 +225,15 @@ export function PublicEventView() {
 
           {/* Right Floating Metadata Dock */}
           <aside className="lg:col-span-5 space-y-4">
-            <div className="rounded-2xl border border-white/10 bg-card/80 p-5 shadow-xl backdrop-blur-xl space-y-5">
+            <div className="rounded-2xl border border-white/10 bg-card/80 p-5 shadow-sm backdrop-blur-xl space-y-5">
               {/* Date & Time */}
               <div className="flex items-start gap-3.5">
                 <div className="grid size-10 place-items-center rounded-xl border border-going/30 bg-going/10 text-going shrink-0">
                   <CalendarClock className="size-5" />
                 </div>
                 <div>
-                  <p className="font-mono text-[10px] uppercase font-bold text-muted-foreground">
-                    Date & Time
+                  <p className="label-caps text-muted-foreground">
+                    Date & time
                   </p>
                   <p className="text-sm font-bold text-foreground mt-0.5">
                     {formattedDate}
@@ -243,9 +250,7 @@ export function PublicEventView() {
                   <MapPin className="size-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-mono text-[10px] uppercase font-bold text-muted-foreground">
-                    Venue
-                  </p>
+                  <p className="label-caps text-muted-foreground">Venue</p>
                   <p className="text-sm font-bold text-foreground mt-0.5 truncate">
                     {event.venue_name}
                   </p>

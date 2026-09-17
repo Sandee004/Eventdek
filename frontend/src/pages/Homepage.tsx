@@ -5,7 +5,7 @@ import {
   useTransform,
   animate,
   type PanInfo,
-} from "framer-motion";
+} from "motion/react";
 import {
   Globe2,
   Info,
@@ -266,7 +266,7 @@ export default function Home() {
 
         <div className="mb-2 flex h-4 items-center justify-center">
           {isLoadingEvents && (
-            <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-card/60 px-2.5 py-0.5 font-mono text-[10px] text-muted-foreground backdrop-blur-md">
+            <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-card/60 px-2.5 py-0.5 text-[10px] text-muted-foreground backdrop-blur-md">
               <Loader2 className="size-3 animate-spin text-going" /> Loading
               events...
             </span>
@@ -280,7 +280,7 @@ export default function Home() {
 
         <div className="relative aspect-[16/23] w-full max-w-[340px] sm:max-w-[390px]">
           {!top && !isLoadingEvents && (
-            <div className="card-frame flex h-full flex-col items-center justify-center rounded-2xl border border-border bg-card/95 p-8 text-center shadow-2xl backdrop-blur-md">
+            <div className="card-frame flex h-full flex-col items-center justify-center rounded-2xl border border-border bg-card/95 p-8 text-center shadow-md backdrop-blur-md">
               <span className="grid size-14 place-items-center rounded-2xl border border-border bg-surface-2">
                 <Sparkles className="size-6 text-going" />
               </span>
@@ -288,15 +288,15 @@ export default function Home() {
                 No matching events
               </h2>
               <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
-                None found for{" "}
+                Nothing matches{" "}
                 <strong className="text-foreground">
                   {stateName(stateId)}
                 </strong>{" "}
-                with filter{" "}
-                <strong className="text-going uppercase">
+                with the{" "}
+                <strong className="text-going capitalize">
                   {pricingFilter}
-                </strong>
-                .
+                </strong>{" "}
+                filter right now.
               </p>
 
               <div className="mt-6 flex flex-wrap justify-center gap-2">
@@ -342,7 +342,7 @@ export default function Home() {
               drag="x"
               dragConstraints={{ left: 0, right: 0 }}
               onDragEnd={handleDragEnd}
-              className="absolute inset-0 cursor-grab active:cursor-grabbing touch-none select-none shadow-2xl"
+              className="absolute inset-0 cursor-grab active:cursor-grabbing touch-none select-none shadow-md"
             >
               <EventCard event={top} onExpand={() => setDetails(top)} />
 

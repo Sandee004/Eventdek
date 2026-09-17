@@ -74,7 +74,7 @@ export default function DetailsSheet({
     <DekSheet
       open={open}
       onClose={onClose}
-      eyebrow={`${event.category.toUpperCase()} · ${formatState(event.state_id)}`}
+      eyebrow={`${event.category} in ${formatState(event.state_id)}`}
       title={event.title}
       footer={
         <div className="grid grid-cols-2 gap-2">
@@ -90,7 +90,7 @@ export default function DetailsSheet({
           >
             {event.is_free
               ? "RSVP (Free)"
-              : `Get Ticket · ₦${event.price_ngn.toLocaleString()}`}
+              : `Get Ticket for ₦${event.price_ngn.toLocaleString()}`}
           </button>
         </div>
       }
@@ -144,8 +144,8 @@ export default function DetailsSheet({
           <div className="flex items-center gap-2 text-muted-foreground">
             <CalendarClock className="size-4 shrink-0 text-going" />
             <span>
-              {relativeDay(event.start_time)} · {fullDate(event.start_time)} ·{" "}
-              {clockTime(event.start_time)}
+              {relativeDay(event.start_time)}, {fullDate(event.start_time)}{" "}
+              at {clockTime(event.start_time)}
             </span>
           </div>
 

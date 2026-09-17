@@ -69,7 +69,7 @@ export function DekSheet({
             <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-b border-border px-5 py-4">
               <div className="min-w-0">
                 {eyebrow && (
-                  <p className="label-caps text-muted-foreground">{eyebrow}</p>
+                  <p className="label-caps capitalize text-muted-foreground">{eyebrow}</p>
                 )}
                 <h2 className="mt-1 truncate text-lg font-bold">{title}</h2>
               </div>

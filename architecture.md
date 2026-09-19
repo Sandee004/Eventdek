@@ -111,31 +111,21 @@ A single daily cron job runs inside Supabase PostgreSQL at **03:00 UTC** to prev
 
 ---
 
-## 6. Background Ingestion & Scraper Pipeline
+## 6. Background Ingestion & Scraper Pipeline (GitHub Actions)
 
-An asynchronous scraper operates on a schedule (every 6 hours) via APScheduler inside FastAPI’s lifespan:
+Scraping and event normalization run offloaded as an automated CI/CD pipeline rather than an in-process web server worker:
 
-- **Data Sources:** Extracts public feeds from Eventbrite, Tix.africa, and regional listings using Playwright and BeautifulSoup.
+- **Orchestration**: Scheduled via GitHub Actions (0 _/6 _ \* \*) every 6 hours on an isolated Ubuntu runner. This prevents CPU/RAM exhaustion and eliminates cold-start spin-down limitations on the web host.
 
-- **Location Mapping:** Resolves venue text to Nigerian states (Lagos, Abuja, Rivers, Oyo, Kano, Enugu, Virtual) using keyword classification dictionaries.
+- **Playwright & BeautifulSoup Extraction**: Boots headless Chromium to scrape public listings from Eventbrite and regional hubs, handling dynamic JavaScript rendering, infinite scrolls, and cookie consent gates.
 
-- **Deduplication:** Skips existing items by matching before creating new database rows.
+- **Clean Ingestion & Upsert**: Normalizes dates to UTC, extracts ticket pricing (NGN, USD, EUR, GBP) or flags free admission, parses venue states using dictionary matching, and generates readable editorial descriptions.
+
+- **Direct Database Sync**: Ingestion writes directly to Supabase PostgreSQL using DATABASE_URL stored securely in GitHub Repository Secrets. Existing listings are deduplicated by canonical URL and title matching before commit.
 
 ---
 
-## 7. Observability & Telemetry (Prometheus & Grafana)
-
-To maintain visibility across scraping jobs, API performance, and deck delivery:
-
-- **FastAPI Instrumentation:** Exposes runtime application and operational telemetry via a /metrics endpoint using prometheus-fastapi-instrumentator.
-
-- **Scraper Pipeline Health:** Tracks job execution intervals, ingestion throughput (events discovered vs. upserted), parser error rates, and upstream anti-bot/DOM failures from Playwright runs.
-
-- **Grafana Dashboards:** Visualizes request latencies, endpoint error budgets (4xx/5xx), active concurrent users, swipe throughput, and database connection pool saturation.
-
-- **Proactive Alerting**: Triggers notifications for sustained scraper downtime, abrupt drops in new event yields, or high API p95 latencies.
-
-## 8. Deployment & Runtime Topology (Render Monorepo)
+## 7. Deployment & Runtime Topology (Render Monorepo)
 
 EventDek runs as a unified single-service container on Render with zero CORS configuration overhead:
 

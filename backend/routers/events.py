@@ -13,7 +13,6 @@ from database import get_db
 from models import Event, Registration, User, UserSwipe
 from routers.auth import get_current_user
 from schemas import EventResponse, SwipePayload
-from services.registration_proxy import execute_proxy_registration
 
 logger = logging.getLogger("eventdek.deck")
 router = APIRouter(prefix="/events", tags=["events"])

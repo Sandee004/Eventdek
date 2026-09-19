@@ -98,7 +98,7 @@ To ensure attendees can enter event halls with zero cellular connectivity or con
 
 ```
 
-- **Stale-While-Revalidate Caching:** The wallet reads instantly from device storage (`localStorage` / IndexedDB). If network is present, it revalidates silently against `/events/my-dek` and syncs the cache.
+- **Stale-While-Revalidate Caching:** The wallet reads instantly from device storage. If network is present, it revalidates silently and syncs the cache.
 - **Network Interruption Handling:** If the device loses connection, the UI presents an offline status indicator showing the last successful sync timestamp, while retaining access to the full pass list.
 - **Vector QR Rendering:** Scannable check-in tokens render client-side via `qrcode.react`, allowing door scanners to inspect and scan valid tokens without internet connectivity.
 - **Zero-Network `.ics` Generation:** Calendar invites generate locally via in-browser `Blob` streams rather than relying on external server endpoints.
@@ -123,7 +123,19 @@ An asynchronous scraper operates on a schedule (every 6 hours) via APScheduler i
 
 ---
 
-## 7. Deployment & Runtime Topology (Render Monorepo)
+## 7. Observability & Telemetry (Prometheus & Grafana)
+
+To maintain visibility across scraping jobs, API performance, and deck delivery:
+
+- **FastAPI Instrumentation:** Exposes runtime application and operational telemetry via a /metrics endpoint using prometheus-fastapi-instrumentator.
+
+- **Scraper Pipeline Health:** Tracks job execution intervals, ingestion throughput (events discovered vs. upserted), parser error rates, and upstream anti-bot/DOM failures from Playwright runs.
+
+- **Grafana Dashboards:** Visualizes request latencies, endpoint error budgets (4xx/5xx), active concurrent users, swipe throughput, and database connection pool saturation.
+
+- **Proactive Alerting**: Triggers notifications for sustained scraper downtime, abrupt drops in new event yields, or high API p95 latencies.
+
+## 8. Deployment & Runtime Topology (Render Monorepo)
 
 EventDek runs as a unified single-service container on Render with zero CORS configuration overhead:
 

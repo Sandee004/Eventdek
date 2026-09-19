@@ -8,3 +8,6 @@ __pycache__/
 .env
 PRD-EVENTDEK.pdf
 data
+**/registration_proxy.py
+monitoring/
+**/monitoring/

@@ -33,7 +33,7 @@ jobs:
 
       - name: Run Scraper
         env:
-          SUPABASE_DB_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PYTHONPATH: .
         run: |
           python backend/services/scraper.py

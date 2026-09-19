@@ -6,7 +6,7 @@ from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+# from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
@@ -74,14 +74,14 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(events.router)
 
-from monitoring.metrics import EVENTS_INGESTED, SCRAPE_RUNS
-
-@app.get("/trigger-test-metric", tags=["system"])
-async def trigger_test():
-    # 1. Fire sample data into the live server memory
-    EVENTS_INGESTED.labels(source_platform="eventbrite", state_id="lagos").inc(12)
-    SCRAPE_RUNS.labels(source_platform="eventbrite", status="success").inc()
-    return {"status": "metrics updated in uvicorn process"}
+# from monitoring.metrics import EVENTS_INGESTED, SCRAPE_RUNS
+# 
+# @app.get("/trigger-test-metric", tags=["system"])
+# async def trigger_test():
+#     # 1. Fire sample data into the live server memory
+#     EVENTS_INGESTED.labels(source_platform="eventbrite", state_id="lagos").inc(12)
+#     SCRAPE_RUNS.labels(source_platform="eventbrite", status="success").inc()
+#     return {"status": "metrics updated in uvicorn process"}
 
 @app.post("/trigger-scraper", tags=["system"])
 async def trigger_full_scrape():
@@ -95,10 +95,10 @@ def health_check():
     return {"status": "ok"}
 
 
-# Explicit Prometheus Exporter Endpoint (Prioritized over SPA fallback)
-@app.get("/metrics", tags=["system"])
-def get_prometheus_metrics():
-    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+# # Explicit Prometheus Exporter Endpoint (Prioritized over SPA fallback)
+# @app.get("/metrics", tags=["system"])
+# def get_prometheus_metrics():
+#     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 # ------------------------------

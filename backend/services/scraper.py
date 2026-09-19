@@ -321,14 +321,14 @@ from models import Event
 from utils import STATE_LOOKUP
 
 # Gracefully import Prometheus metrics if present; mock if running in isolated runner
-try:
-    from monitoring.metrics import SCRAPE_RUNS, EVENTS_INGESTED, SCRAPE_DURATION
-    HAS_METRICS = True
-except (ImportError, Exception):
-    HAS_METRICS = False
-    SCRAPE_RUNS = None
-    EVENTS_INGESTED = None
-    SCRAPE_DURATION = None
+# try:
+#     from monitoring.metrics import SCRAPE_RUNS, EVENTS_INGESTED, SCRAPE_DURATION
+#     HAS_METRICS = True
+# except (ImportError, Exception):
+HAS_METRICS = False
+SCRAPE_RUNS = None
+EVENTS_INGESTED = None
+SCRAPE_DURATION = None
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("eventdek.scraper")
